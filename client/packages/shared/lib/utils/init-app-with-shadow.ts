@@ -1,7 +1,16 @@
 import { createRoot } from 'react-dom/client';
 import type { ReactElement } from 'react';
+import type { Root } from 'react-dom/client';
 
-export const initAppWithShadow = ({ id, app, inlineCss }: { id: string; inlineCss: string; app: ReactElement }) => {
+export const initAppWithShadow = ({
+  id,
+  app,
+  inlineCss,
+}: {
+  id: string;
+  inlineCss: string;
+  app: ReactElement;
+}): Root => {
   const root = document.createElement('div');
   root.id = id;
 
@@ -30,5 +39,10 @@ export const initAppWithShadow = ({ id, app, inlineCss }: { id: string; inlineCs
   }
 
   shadowRoot.appendChild(rootIntoShadow);
-  createRoot(rootIntoShadow).render(app);
+
+  const reactRoot = createRoot(rootIntoShadow);
+  reactRoot.render(app);
+
+  return reactRoot;
 };
+

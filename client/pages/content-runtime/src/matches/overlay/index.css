@@ -1,0 +1,142 @@
+@import '@extension/ui/global.css';
+
+.app-container {
+  font-size: 20px;
+}
+
+.overlay-container {
+  position: fixed;
+  left: 6rem;
+  top: 6rem;
+  width: 300px;
+  height: 400px;
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  z-index: 999999;
+}
+
+.drag-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  cursor: move;
+  border-top-left-radius: 0.75rem;
+  border-top-right-radius: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: #f3f4f6;
+  padding: 0.5rem 1rem;
+  position: relative;
+  z-index: 10;
+  user-select: none;
+}
+
+.drag-bar .drag-text {
+  flex-grow: 1;
+}
+
+.close-button {
+  background-color: #ff5f56;
+  border: 1px solid rgba(0, 0, 0, 0.55);
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  color: #333;
+  cursor: pointer;
+  pointer-events: all;
+  padding: 0;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.close-button:hover {
+  background-color: #ff3333;
+  display: flex;
+  color: white;
+}
+
+.handle {
+  position: absolute;
+  background: transparent;
+  z-index: 999999;
+  pointer-events: auto;
+  width: auto;
+  height: auto;
+  padding: 0;
+  margin: 0;
+}
+
+.handle-n {
+  top: -4px;
+  left: 50%;
+  width: 80%;
+  height: 6px;
+  cursor: n-resize;
+  transform: translateX(-50%);
+}
+
+.handle-s {
+  bottom: -3px;
+  left: 50%;
+  width: 80%;
+  height: 6px;
+  cursor: s-resize;
+  transform: translateX(-50%);
+}
+
+.handle-e {
+  right: -3px;
+  top: 50%;
+  width: 6px;
+  height: 80%;
+  cursor: e-resize;
+  transform: translateY(-50%);
+}
+
+.handle-w {
+  left: -3px;
+  top: 50%;
+  width: 6px;
+  height: 80%;
+  cursor: w-resize;
+  transform: translateY(-50%);
+}
+
+.handle-se {
+  right: -3px;
+  bottom: -3px;
+  width: 12px;
+  height: 12px;
+  cursor: se-resize;
+}
+
+.handle-sw {
+  left: -3px;
+  bottom: -3px;
+  width: 12px;
+  height: 12px;
+  cursor: sw-resize;
+}
+
+.handle-ne {
+  right: -3px;
+  top: -3px;
+  width: 12px;
+  height: 12px;
+  cursor: ne-resize;
+}
+
+.handle-nw {
+  left: -3px;
+  top: -3px;
+  width: 12px;
+  height: 12px;
+  cursor: nw-resize;
+}

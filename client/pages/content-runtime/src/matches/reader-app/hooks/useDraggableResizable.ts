@@ -6,22 +6,22 @@ export function useDraggableResizable(options: {
   minHeight: number;
   maxHeight: number;
 }) {
-  const overlayRef = useRef<HTMLDivElement>(null);
+  const readerPanelRef = useRef<HTMLDivElement>(null);
 
   const startDrag = (event: React.MouseEvent<HTMLDivElement>) => {
-    const overlay = overlayRef.current;
-    if (!overlay) return;
+    const readerPanel = readerPanelRef.current;
+    if (!readerPanel) return;
 
     const startX = event.clientX;
     const startY = event.clientY;
 
-    const rect = overlay.getBoundingClientRect();
+    const rect = readerPanel.getBoundingClientRect();
     const offsetX = startX - rect.left;
     const offsetY = startY - rect.top;
 
     const onMouseMove = (event: MouseEvent) => {
-      overlay.style.left = `${event.clientX - offsetX}px`;
-      overlay.style.top = `${event.clientY - offsetY}px`;
+      readerPanel.style.left = `${event.clientX - offsetX}px`;
+      readerPanel.style.top = `${event.clientY - offsetY}px`;
     };
 
     const onMouseUp = () => {
@@ -33,21 +33,21 @@ export function useDraggableResizable(options: {
     document.addEventListener('mouseup', onMouseUp);
   };
 
-  // Resize Overlay Container
+  // Resize ReaderPanel Container
 
   const startResize =
     (direction: 'nw' | 'ne' | 'sw' | 'se' | 'n' | 's' | 'e' | 'w') => (event: React.MouseEvent<HTMLDivElement>) => {
       event.stopPropagation();
 
-      const overlay = overlayRef.current;
-      if (!overlay) return;
+      const readerPanel = readerPanelRef.current;
+      if (!readerPanel) return;
 
       const startX = event.clientX;
       const startY = event.clientY;
-      const startWidth = overlay.offsetWidth;
-      const startHeight = overlay.offsetHeight;
-      const startLeft = overlay.offsetLeft;
-      const startTop = overlay.offsetTop;
+      const startWidth = readerPanel.offsetWidth;
+      const startHeight = readerPanel.offsetHeight;
+      const startLeft = readerPanel.offsetLeft;
+      const startTop = readerPanel.offsetTop;
 
       const onMouseMove = (event: MouseEvent) => {
         let newWidth = startWidth;
@@ -78,10 +78,10 @@ export function useDraggableResizable(options: {
         newWidth = Math.min(Math.max(newWidth, options.minWidth), options.maxWidth);
         newHeight = Math.min(Math.max(newHeight, options.minHeight), options.maxHeight);
 
-        overlay.style.width = `${newWidth}px`;
-        overlay.style.height = `${newHeight}px`;
-        overlay.style.left = `${newLeft}px`;
-        overlay.style.top = `${newTop}px`;
+        readerPanel.style.width = `${newWidth}px`;
+        readerPanel.style.height = `${newHeight}px`;
+        readerPanel.style.left = `${newLeft}px`;
+        readerPanel.style.top = `${newTop}px`;
       };
 
       const onMouseUp = () => {
@@ -93,5 +93,5 @@ export function useDraggableResizable(options: {
       document.addEventListener('mouseup', onMouseUp);
     };
 
-  return { overlayRef, startDrag, startResize };
+  return { readerPanelRef, startDrag, startResize };
 }

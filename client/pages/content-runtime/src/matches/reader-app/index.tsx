@@ -1,49 +1,49 @@
-import inlineCss from '../../../dist/overlay/index.css?inline';
+import inlineCss from '../../../dist/reader-app/index.css?inline';
 import { initAppWithShadow } from '@extension/shared';
-import App from '@src/matches/overlay/App';
+import App from '@src/matches/reader-app/App';
 import type { Root } from 'react-dom/client';
 
-const ROOT_ID = '__ROOT_OVERLAY__';
+const ROOT_ID = '__ROOT_READERPANEL__';
 let activeReactRoot: Root | null = null;
 
-function destroyOverlayInstance() {
-  const overlayContainer = document.getElementById(ROOT_ID);
+function destroyReaderPanelInstance() {
+  const readerPanelContainer = document.getElementById(ROOT_ID);
 
   if (activeReactRoot) {
     activeReactRoot.unmount();
     activeReactRoot = null;
 
-    if (overlayContainer) {
-      overlayContainer.remove();
+    if (readerPanelContainer) {
+      readerPanelContainer.remove();
     }
 
-    if (window.hasOwnProperty('overlayGuiActive')) {
-      delete (window as any).overlayGuiActive;
+    if (window.hasOwnProperty('readerPanelGuiActive')) {
+      delete (window as any).readerPanelGuiActive;
     }
 
-    console.log('Overlay extension instance was destroyed.');
+    console.log('Reader Panel instance was destroyed.');
   }
 }
 
-function initializeOverlay(): boolean {
+function initializeReaderPanel(): boolean {
   const existing = document.getElementById(ROOT_ID);
 
   if (existing) {
-    console.warn('Overlay extension instance already exists. Aborting.');
+    console.warn('Reader Panel instance already exists. Aborting.');
     return false;
   }
 
   try {
     const reactRoot = initAppWithShadow({
       id: ROOT_ID,
-      app: <App destroyCallback={destroyOverlayInstance} />,
+      app: <App destroyCallback={destroyReaderPanelInstance} />,
       inlineCss,
     });
     activeReactRoot = reactRoot;
 
-    (window as any).overlayGuiActive = true;
+    (window as any).readerPanelGuiActive = true;
 
-    console.log('Overlay extension successfully initialized');
+    console.log('Reader Panel successfully initialized');
     return true;
   } catch (error) {
     console.error('Failed to initialize React application.', error);
@@ -51,4 +51,4 @@ function initializeOverlay(): boolean {
   }
 }
 
-initializeOverlay();
+initializeReaderPanel();

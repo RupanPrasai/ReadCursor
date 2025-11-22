@@ -1,11 +1,11 @@
 import { useDraggableResizable } from '../hooks/useDraggableResizable';
 
-interface OverlayProps {
+interface ReaderPanelProps {
   onDestroy: () => void;
 }
 
-export function Overlay({ onDestroy }: OverlayProps) {
-  const { overlayRef, startDrag, startResize } = useDraggableResizable({
+export function ReaderPanel({ onDestroy }: ReaderPanelProps) {
+  const { readerPanelRef, startDrag, startResize } = useDraggableResizable({
     minWidth: 300,
     maxWidth: 800,
     minHeight: 400,
@@ -13,7 +13,7 @@ export function Overlay({ onDestroy }: OverlayProps) {
   });
 
   return (
-    <div ref={overlayRef} className="overlay-container">
+    <div ref={readerPanelRef} className="readerpanel-container">
       {/* Drag Bar Section */}
       <div onMouseDown={startDrag} className="drag-bar">
         <span className="drag-text">Drag Here</span>
@@ -22,7 +22,7 @@ export function Overlay({ onDestroy }: OverlayProps) {
         </button>
       </div>
       <div className="p-4">
-        <h2 className="text-lg font-semibold">Overlay</h2>
+        <h2 className="text-lg font-semibold">Reader Panel</h2>
         <p className="text-sm text-gray-600">Floating Panel</p>
       </div>
 

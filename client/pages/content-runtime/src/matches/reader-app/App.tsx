@@ -1,4 +1,4 @@
-import { Overlay } from './components/Overlay';
+import { ReaderPanel } from './gui/ReaderPanel';
 
 interface AppProps {
   destroyCallback: () => void;
@@ -7,7 +7,7 @@ interface AppProps {
 export default function App({ destroyCallback }: AppProps) {
   return (
     <div className="app-container">
-      <Overlay onDestroy={destroyCallback} />
+      <ReaderPanel onDestroy={destroyCallback} />
     </div>
   );
 }

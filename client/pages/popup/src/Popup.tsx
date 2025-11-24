@@ -27,7 +27,7 @@ const Popup = () => {
     await chrome.scripting
       .executeScript({
         target: { tabId: tab.id! },
-        files: ['/content-runtime/readerpanel.iife.js'],
+        files: ['/content-runtime/readerApp.iife.js'],
       })
       .catch(err => {
         // Handling errors related to other paths

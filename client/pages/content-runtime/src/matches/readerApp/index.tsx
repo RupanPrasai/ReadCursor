@@ -1,6 +1,6 @@
-import inlineCss from '../../../dist/reader-app/index.css?inline';
+import inlineCss from '../../../dist/readerApp/index.css?inline';
 import { initAppWithShadow } from '@extension/shared';
-import App from '@src/matches/reader-app/App';
+import App from '@src/matches/readerApp/App';
 import type { Root } from 'react-dom/client';
 
 const ROOT_ID = '__ROOT_READERPANEL__';

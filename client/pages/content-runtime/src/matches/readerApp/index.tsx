@@ -6,6 +6,18 @@ import type { Root } from 'react-dom/client';
 const ROOT_ID = '__ROOT_READERPANEL__';
 let activeReactRoot: Root | null = null;
 
+chrome.runtime.onMessage.addListener(swMessage => {
+  console.log('[ReadCursor] Runtime message received:', swMessage);
+
+  if (swMessage.type === 'START_FROM_SELECTION') {
+    window.dispatchEvent(new CustomEvent('readcursor:startFromSelection', { detail: swMessage }));
+  }
+});
+
+window.addEventListener('readcursor:startFromSelection', (event: any) => {
+  console.log('[ReadCursor TEST] Received SW Message:', event.detail);
+});
+
 function destroyReaderPanelInstance() {
   const readerPanelContainer = document.getElementById(ROOT_ID);
 

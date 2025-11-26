@@ -18,7 +18,6 @@ function isVisible(node: Text): boolean {
   const style = window.getComputedStyle(parent);
   if (style.visibility === 'hidden' || style.display === 'none') return false;
 
-  // Ignore script/style tags
   const tag = parent.tagName?.toLowerCase();
   if (tag === 'script' || tag === 'style' || tag === 'noscript') return false;
 
@@ -73,4 +72,3 @@ export function scanDOM(): ScanResult {
 
   return { words };
 }
-

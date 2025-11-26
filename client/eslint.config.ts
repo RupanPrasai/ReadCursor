@@ -54,7 +54,7 @@ export default config(
       'react/prop-types': 'off',
       'prefer-const': 'error',
       'no-var': 'error',
-      'func-style': ['error', 'expression', { allowArrowFunctions: true }],
+      'func-style': ['error', 'declaration', { allowArrowFunctions: true }],
       'no-restricted-imports': [
         'error',
         {

@@ -1,3 +1,5 @@
+import { scanDOM } from './dom/DomScanner';
+import { createHighlightCursor, highlightRect, clearHighlight } from './readerEngine/Highlighter';
 import inlineCss from '../../../dist/readerApp/index.css?inline';
 import { initAppWithShadow } from '@extension/shared';
 import App from '@src/matches/readerApp/App';
@@ -5,6 +7,19 @@ import type { Root } from 'react-dom/client';
 
 const ROOT_ID = '__ROOT_READERPANEL__';
 let activeReactRoot: Root | null = null;
+
+const { words } = scanDOM();
+
+console.log(words.slice(0, 3));
+
+/*
+const cursor = createHighlightCursor();
+console.log('cursor exists', !!cursor);
+
+highlightRect(first.getRect());
+setTimeout(() => clearHighlight(), 1000);
+
+*/
 
 chrome.runtime.onMessage.addListener(swMessage => {
   console.log('[ReadCursor] Runtime message received:', swMessage);

@@ -39,6 +39,8 @@ export function scanDOM(): ScanResult {
 
   let current: Text | null = walker.nextNode() as Text | null;
 
+  console.log('CURRENTNODE', current);
+
   while (current) {
     const content = current.textContent || '';
 
@@ -46,7 +48,6 @@ export function scanDOM(): ScanResult {
     let match: RegExpExecArray | null;
 
     while ((match = regex.exec(content)) !== null) {
-      console.log('MATCH', match);
       const startOffset = match.index;
       const endOffset = match.index + match[0].length;
 

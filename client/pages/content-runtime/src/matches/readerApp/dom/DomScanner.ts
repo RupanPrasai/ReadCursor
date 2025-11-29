@@ -1,3 +1,6 @@
+import { Readability } from '@mozilla/readability';
+import DOMPurify from 'dompurify';
+
 export interface Word {
   index: number;
   text: string;
@@ -11,66 +14,39 @@ export interface ScanResult {
   words: Word[];
 }
 
-function isVisible(node: Text): boolean {
-  const parent = node.parentElement;
-  if (!parent) return false;
-
-  const style = window.getComputedStyle(parent);
-  if (style.visibility === 'hidden' || style.display === 'none') return false;
-
-  const tag = parent.tagName?.toLowerCase();
-  if (tag === 'script' || tag === 'style' || tag === 'noscript') return false;
-
-  return true;
+interface Article {
+  title: string | null;
+  content: string;
+  textContent: string;
+  length: number;
+  excerpt: string | null;
+  byline: string | null;
+  dir: string | null;
+  siteName: string | null;
+  lang: string | null;
+  publishedTime: string | null;
 }
 
-export function scanDOM(): ScanResult {
-  const words: Word[] = [];
-  let index = 0;
+interface ReadResult {
+  textContent: string | null;
+  content: string | null;
+}
 
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
-    acceptNode(node) {
-      const text = node.textContent;
-      if (!text || !text.trim()) return NodeFilter.FILTER_REJECT;
-      if (!isVisible(node as Text)) return NodeFilter.FILTER_REJECT;
-      return NodeFilter.FILTER_ACCEPT;
-    },
-  });
+function readDOM(): string | null {
+  const documentClone = document.cloneNode(true) as Document;
+  const reader = new Readability(documentClone);
+  const article = reader.parse() as Article | null;
+  const content = article?.content ?? null;
 
-  let current: Text | null = walker.nextNode() as Text | null;
-
-  console.log('CURRENTNODE', current);
-
-  while (current) {
-    const content = current.textContent || '';
-
-    const regex = /\b\w+\b/g;
-    let match: RegExpExecArray | null;
-
-    while ((match = regex.exec(content)) !== null) {
-      const startOffset = match.index;
-      const endOffset = match.index + match[0].length;
-
-      const word: Word = {
-        index: index++,
-        text: match[0],
-        node: current,
-        startOffset,
-        endOffset,
-        getRect: () => {
-          const textNode = current as Text;
-          const range = document.createRange();
-          range.setStart(textNode, startOffset);
-          range.setEnd(textNode, endOffset);
-          return range.getBoundingClientRect();
-        },
-      };
-
-      words.push(word);
-    }
-
-    current = walker.nextNode() as Text | null;
+  if (!article?.content) {
+    return null;
   }
-
-  return { words };
+  return content;
 }
+
+function sanitizeDOM(dirty: string): string {
+  const cleanDOM = DOMPurify.sanitize(dirty);
+  return cleanDOM;
+}
+
+export function createReaderReferences(html: string);

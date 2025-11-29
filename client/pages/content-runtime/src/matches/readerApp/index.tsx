@@ -1,4 +1,4 @@
-import { scanDOM } from './dom/DomScanner';
+import { scanDOM, sanitizeHTML } from './dom/DomScanner';
 import { createHighlightCursor, highlightRect, clearHighlight } from './readerEngine/Highlighter';
 import inlineCss from '../../../dist/readerApp/index.css?inline';
 import { initAppWithShadow } from '@extension/shared';
@@ -8,9 +8,16 @@ import type { Root } from 'react-dom/client';
 const ROOT_ID = '__ROOT_READERPANEL__';
 let activeReactRoot: Root | null = null;
 
-const { words } = scanDOM();
+const data = scanDOM();
+let cleanDOM;
+if (data && data.content) {
+  cleanDOM = sanitizeHTML(data.content);
+}
 
-console.log(words.slice(0, 3));
+if (cleanDOM) {
+  console.log(cleanDOM.length);
+  console.log(typeof cleanDOM);
+}
 
 /*
 const cursor = createHighlightCursor();

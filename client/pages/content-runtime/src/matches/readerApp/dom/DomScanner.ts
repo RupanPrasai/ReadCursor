@@ -84,3 +84,18 @@ export function createReaderReferences(): string[] | null {
     return null;
   }
 }
+
+export function findPageTextNodes(): Text[] {
+  const domWalker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  const nodes: Text[] = [];
+  let textNode = domWalker.nextNode() as Text | null;
+
+  while (textNode) {
+    if (textNode.textContent?.trim()) {
+      nodes.push(textNode);
+      textNode = domWalker.nextNode() as Text | null;
+    }
+  }
+
+  return nodes;
+}

@@ -1,4 +1,4 @@
-import { createReaderReferences } from './dom/DomScanner';
+import { createReaderReferences, findPageTextNodes } from './dom/DomScanner';
 import { createHighlightCursor, highlightRect, clearHighlight } from './readerEngine/Highlighter';
 import inlineCss from '../../../dist/readerApp/index.css?inline';
 import { initAppWithShadow } from '@extension/shared';
@@ -8,9 +8,15 @@ import type { Root } from 'react-dom/client';
 const ROOT_ID = '__ROOT_READERPANEL__';
 let activeReactRoot: Root | null = null;
 
+/*
 const readerRef = createReaderReferences();
 
 console.log(readerRef);
+*/
+
+const pageNodes = findPageTextNodes();
+
+console.log(pageNodes);
 
 /*
 const cursor = createHighlightCursor();

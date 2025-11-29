@@ -49,4 +49,38 @@ function sanitizeDOM(dirty: string): string {
   return cleanDOM;
 }
 
-export function createReaderReferences(html: string);
+function tokenize(text: string): string[] {
+  const regex = /\b\p{L}+(?:['’]\p{L}+)?\b/gu;
+  return text.match(regex) ?? [];
+}
+
+export function createReaderReferences(): string[] | null {
+  const dirtyHTML = readDOM();
+  let cleanDOM;
+  if (dirtyHTML) {
+    cleanDOM = sanitizeDOM(dirtyHTML);
+  } else {
+    cleanDOM = null;
+  }
+
+  if (cleanDOM) {
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = cleanDOM;
+
+    const cleanWalker = wrapper.ownerDocument.createTreeWalker(wrapper, NodeFilter.SHOW_TEXT);
+    const segments: string[] = [];
+    let textNode = cleanWalker.nextNode() as Text | null;
+
+    while (textNode) {
+      const text = textNode.textContent?.trim();
+      if (text) {
+        segments.push(...tokenize(text));
+      }
+      textNode = cleanWalker.nextNode() as Text | null;
+    }
+
+    return segments;
+  } else {
+    return null;
+  }
+}

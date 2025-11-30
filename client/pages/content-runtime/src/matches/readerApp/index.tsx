@@ -1,4 +1,4 @@
-import { createReaderReferences, findPageTextNodes } from './dom/DomScanner';
+import { createReaderReferences, findPageTextNodes, mapReferencesToPageAnchors } from './dom/DomScanner';
 import { createHighlightCursor, highlightRect, clearHighlight } from './readerEngine/Highlighter';
 import inlineCss from '../../../dist/readerApp/index.css?inline';
 import { initAppWithShadow } from '@extension/shared';
@@ -12,12 +12,15 @@ let activeReactRoot: Root | null = null;
 const readerRef = createReaderReferences();
 
 console.log(readerRef);
-*/
 
 const pageNodes = findPageTextNodes();
 
 console.log(pageNodes);
 
+*/
+
+const mapped = mapReferencesToPageAnchors();
+console.log(mapped);
 /*
 const cursor = createHighlightCursor();
 console.log('cursor exists', !!cursor);

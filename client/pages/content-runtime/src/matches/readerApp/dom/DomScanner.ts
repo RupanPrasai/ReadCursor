@@ -32,6 +32,13 @@ interface ReadResult {
   content: string | null;
 }
 
+interface CursorPointer {
+  node: Text;
+  startOffset: number;
+  endOffset: number;
+  token: string;
+}
+
 function readDOM(): string | null {
   const documentClone = document.cloneNode(true) as Document;
   const reader = new Readability(documentClone);
@@ -88,14 +95,40 @@ export function createReaderReferences(): string[] | null {
 export function findPageTextNodes(): Text[] {
   const domWalker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   const nodes: Text[] = [];
-  let textNode = domWalker.nextNode() as Text | null;
+  let textNode: Text | null;
 
-  while (textNode) {
-    if (textNode.textContent?.trim()) {
+  while ((textNode = domWalker.nextNode() as Text | null)) {
+    const text = textNode.textContent?.trim();
+    if (text) {
       nodes.push(textNode);
-      textNode = domWalker.nextNode() as Text | null;
+    }
+  }
+  return nodes;
+}
+
+export function mapReferencesToPageAnchors(): any {
+  const anchors: CursorPointer[] = [];
+  const segments: string[] | null = createReaderReferences();
+  const pageNodes: Text[] = findPageTextNodes();
+  if (!segments) return null;
+  if (!pageNodes) return null;
+
+  for (const node of pageNodes) {
+    const content = node.textContent ?? '';
+
+    for (const segment of segments) {
+      const regex = new RegExp(`\\b${segment}\\b`, 'gu');
+      let match;
+      while ((match = regex.exec(content))) {
+        anchors.push({
+          node,
+          startOffset: match.index,
+          endOffset: match.index + segment.length,
+          token: segment,
+        });
+      }
     }
   }
 
-  return nodes;
+  return anchors;
 }

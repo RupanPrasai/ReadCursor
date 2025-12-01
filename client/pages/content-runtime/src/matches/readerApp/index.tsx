@@ -1,4 +1,5 @@
 import { createReaderReferences, findPageTextNodes, mapReferencesToPageAnchors } from './dom/DomScanner';
+import { annotateWords } from './dom/DomScanTest';
 import { createHighlightCursor, highlightRect, clearHighlight } from './readerEngine/Highlighter';
 import inlineCss from '../../../dist/readerApp/index.css?inline';
 import { initAppWithShadow } from '@extension/shared';
@@ -11,16 +12,23 @@ let activeReactRoot: Root | null = null;
 /*
 const readerRef = createReaderReferences();
 
+console.log('READER REF ===');
 console.log(readerRef);
+console.log('READER REF ===');
 
 const pageNodes = findPageTextNodes();
 
+console.log(' PAGE NODES ===');
 console.log(pageNodes);
-
+console.log('PAGE NODES===');
 */
 
+requestAnimationFrame(() => annotateWords());
+
+/*
 const mapped = mapReferencesToPageAnchors();
 console.log(mapped);
+*/
 /*
 const cursor = createHighlightCursor();
 console.log('cursor exists', !!cursor);

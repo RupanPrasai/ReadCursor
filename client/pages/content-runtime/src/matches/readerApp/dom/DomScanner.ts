@@ -74,7 +74,7 @@ export function createReaderReferences(): string[] | null {
     const wrapper = document.createElement('div');
     wrapper.innerHTML = cleanDOM;
 
-    const cleanWalker = wrapper.ownerDocument.createTreeWalker(wrapper, NodeFilter.SHOW_TEXT);
+    const cleanWalker = document.createTreeWalker(wrapper, NodeFilter.SHOW_TEXT);
     const segments: string[] = [];
     let textNode = cleanWalker.nextNode() as Text | null;
 

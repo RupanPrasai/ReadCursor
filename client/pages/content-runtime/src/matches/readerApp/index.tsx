@@ -13,6 +13,10 @@ let activeReactRoot: Root | null = null;
 
 labelDomNodes();
 
+const readableNodes = getReadableNodes();
+
+console.log(readableNodes);
+
 //
 //
 //

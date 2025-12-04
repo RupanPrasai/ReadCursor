@@ -24,6 +24,41 @@ function isElement(node: Node): node is Element {
   return node.nodeType === Node.ELEMENT_NODE;
 }
 
+function isReadableTag(element: Element): boolean {
+  const tag = element.tagName.toLowerCase();
+  if (
+    tag !== 'p' &&
+    tag !== 'span' &&
+    tag !== 'li' &&
+    tag !== 'dd' &&
+    tag !== 'dt' &&
+    tag !== 'h1' &&
+    tag !== 'h2' &&
+    tag !== 'h3' &&
+    tag !== 'h4' &&
+    tag !== 'h5' &&
+    tag !== 'h6'
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function isReadableFontSize(element: Element): boolean {
+  const style = window.getComputedStyle(element);
+
+  if (!style) {
+    return false;
+  }
+
+  const fontSize = style.fontSize;
+
+  if (!fontSize || fontSize === '0' || fontSize === '0px') {
+    return false;
+  }
+  return true;
+}
+
 export function labelDomNodes(): void {
   let rcCounter = 1;
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
@@ -64,6 +99,10 @@ export function readDOM(): { root: HTMLElement | null; readableIds: Set<number> 
   while (walker.nextNode()) {
     const node = walker.currentNode;
     if (node.nodeType === node.ELEMENT_NODE) {
+      const element = node as Element;
+      if (!isReadableTag(element)) {
+        continue;
+      }
       const rcid = (node as Element).getAttribute('data-rcid');
       if (rcid) {
         readableIds.add(Number(rcid));
@@ -101,7 +140,7 @@ export function getReadableNodes(): Element[] {
 
   for (const id of readableIds) {
     const element = originalMap.get(id);
-    if (element) {
+    if (element && isReadableFontSize(element)) {
       result.push(element);
     }
   }

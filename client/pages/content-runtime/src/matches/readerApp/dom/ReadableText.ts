@@ -45,17 +45,23 @@ function isReadableTag(element: Element): boolean {
 }
 
 function isReadableFontSize(element: Element): boolean {
-  const style = window.getComputedStyle(element);
+  const rect = element.getBoundingClientRect();
 
-  if (!style) {
+  if (!rect) {
     return false;
   }
 
-  const fontSize = style.fontSize;
+  const rectHeight = rect.height;
+  const rectWidth = rect.width;
 
-  if (!fontSize || fontSize === '0' || fontSize === '0px') {
+  if (rectHeight <= 2) {
     return false;
   }
+
+  if (rectWidth <= 2) {
+    return false;
+  }
+
   return true;
 }
 

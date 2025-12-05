@@ -71,7 +71,7 @@ export function findTitleNode(title: string): HTMLElement | null {
   return null;
 }
 
-export function labelDomNodes(): void {
+function labelDomNodes(): void {
   let rcCounter = 1;
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
 
@@ -87,6 +87,7 @@ export function labelDomNodes(): void {
 }
 
 export function readDOM(): Set<number> {
+  labelDomNodes();
   const clone = document.cloneNode(true) as Document;
   const options = {
     serializer: el => el,

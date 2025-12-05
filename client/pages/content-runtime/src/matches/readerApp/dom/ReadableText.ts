@@ -102,12 +102,22 @@ export function readDOM(): Set<number> {
   }
 
   let articleTitle;
+  let titleNode: HTMLElement | null = null;
+
   if (article.title) {
     articleTitle = article.title;
+    titleNode = findTitleNode(articleTitle);
   }
 
   const root = article.content as HTMLElement;
   const readableIds = new Set<number>();
+
+  if (titleNode) {
+    const titleId = titleNode.getAttribute('data-rcid');
+    if (titleId !== null) {
+      readableIds.add(Number(titleId));
+    }
+  }
 
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
 
@@ -125,9 +135,7 @@ export function readDOM(): Set<number> {
     }
   }
 
-  return {
-    readableIds,
-  };
+  return readableIds;
 }
 
 export function buildNodeMap(): Map<number, Element> {

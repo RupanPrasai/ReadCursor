@@ -1,4 +1,4 @@
-import { readDOM, labelDomNodes, getReadableNodes, findTitleNode } from './dom/ReadableText';
+import { readDOM, labelDomNodes, getReadableNodes, buildNodeMap } from './dom/ReadableText';
 import inlineCss from '../../../dist/readerApp/index.css?inline';
 import { initAppWithShadow } from '@extension/shared';
 import App from '@src/matches/readerApp/App';
@@ -17,13 +17,14 @@ const reader = readDOM();
 
 console.log(reader);
 
-if (reader.articleTitle) {
-  const title = findTitleNode(reader.articleTitle);
-  console.log(title);
-}
+const nodeMap = buildNodeMap();
 
+console.log(nodeMap);
+
+/*
 const readableNodes = getReadableNodes();
 console.log(readableNodes);
+*/
 
 //
 //

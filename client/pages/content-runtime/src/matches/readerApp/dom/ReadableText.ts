@@ -1,18 +1,5 @@
 import { Readability } from '@mozilla/readability';
 
-interface Article {
-  title: string | null;
-  content: string;
-  textContent: string;
-  length: number;
-  excerpt: string | null;
-  byline: string | null;
-  dir: string | null;
-  siteName: string | null;
-  lang: string | null;
-  publishedTime: string | null;
-}
-
 interface ReadableArticle {
   content: HTMLElement;
   title: string;
@@ -65,6 +52,25 @@ function isReadableFontSize(element: Element): boolean {
   return true;
 }
 
+export function findTitleNode(title: string): HTMLElement | null {
+  if (!title) {
+    return null;
+  }
+
+  title = title.trim().toLowerCase();
+
+  const candidates = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
+
+  for (let i = 0; i < candidates.length; i++) {
+    const element = candidates[i];
+    const text = element.textContent?.trim().toLowerCase();
+    if (text === title) {
+      return element as HTMLElement;
+    }
+  }
+  return null;
+}
+
 export function labelDomNodes(): void {
   let rcCounter = 1;
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
@@ -80,7 +86,7 @@ export function labelDomNodes(): void {
   }
 }
 
-export function readDOM(): { root: HTMLElement | null; readableIds: Set<number> } {
+export function readDOM(): Set<number> {
   const clone = document.cloneNode(true) as Document;
   const options = {
     serializer: el => el,
@@ -91,10 +97,13 @@ export function readDOM(): { root: HTMLElement | null; readableIds: Set<number> 
   const article = reader.parse() as ReadableArticle | null;
 
   if (!article || !article.content) {
-    return {
-      root: null,
-      readableIds: new Set(),
-    };
+    const readableIds = new Set<number>();
+    return readableIds;
+  }
+
+  let articleTitle;
+  if (article.title) {
+    articleTitle = article.title;
   }
 
   const root = article.content as HTMLElement;
@@ -117,7 +126,6 @@ export function readDOM(): { root: HTMLElement | null; readableIds: Set<number> 
   }
 
   return {
-    root,
     readableIds,
   };
 }

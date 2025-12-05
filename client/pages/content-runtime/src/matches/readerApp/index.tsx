@@ -1,4 +1,4 @@
-import { readDOM, labelDomNodes, getReadableNodes } from './dom/ReadableText';
+import { readDOM, labelDomNodes, getReadableNodes, findTitleNode } from './dom/ReadableText';
 import inlineCss from '../../../dist/readerApp/index.css?inline';
 import { initAppWithShadow } from '@extension/shared';
 import App from '@src/matches/readerApp/App';
@@ -13,8 +13,16 @@ let activeReactRoot: Root | null = null;
 
 labelDomNodes();
 
-const readableNodes = getReadableNodes();
+const reader = readDOM();
 
+console.log(reader);
+
+if (reader.articleTitle) {
+  const title = findTitleNode(reader.articleTitle);
+  console.log(title);
+}
+
+const readableNodes = getReadableNodes();
 console.log(readableNodes);
 
 //

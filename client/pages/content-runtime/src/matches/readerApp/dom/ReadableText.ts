@@ -155,7 +155,7 @@ export function buildNodeMap(): Map<number, Element> {
 }
 
 export function getReadableNodes(): Element[] {
-  const { readableIds } = readDOM();
+  const readableIds = readDOM();
   const originalMap = buildNodeMap();
 
   const result: Element[] = [];

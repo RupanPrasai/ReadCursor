@@ -1,4 +1,5 @@
-import { readDOM, getReadableNodes } from './dom/ReadableText';
+import { getReadableNodes } from './dom/ReadableText';
+import { extractWordGeometryFromReadableNodes } from './dom/ReadableWords';
 import inlineCss from '../../../dist/readerApp/index.css?inline';
 import { initAppWithShadow } from '@extension/shared';
 import App from '@src/matches/readerApp/App';
@@ -12,7 +13,9 @@ let activeReactRoot: Root | null = null;
 //
 
 const readableNodes = getReadableNodes();
-console.log(readableNodes);
+const wordGeometry = extractWordGeometryFromReadableNodes(readableNodes);
+
+console.log(wordGeometry);
 
 //
 //

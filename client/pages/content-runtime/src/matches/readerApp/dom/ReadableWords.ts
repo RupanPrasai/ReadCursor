@@ -20,6 +20,19 @@ export function getWordBoundaries(text: string): Array<[number, number]> {
   return boundaries;
 }
 
+export function toAbsoluteRect(rect: DOMRect): DOMRect {
+  return {
+    x: rect.x + window.scrollX,
+    y: rect.y + window.scrollY,
+    top: rect.top + window.scrollY,
+    left: rect.left + window.scrollX,
+    bottom: rect.bottom + window.scrollY,
+    right: rect.right + window.scrollX,
+    width: rect.width,
+    height: rect.height,
+  } as DOMRect;
+}
+
 export function extractWordsFromNode(element: Element) {
   const rcid = Number(element.getAttribute('data-rcid'));
   const words: any[] = [];
@@ -36,10 +49,12 @@ export function extractWordsFromNode(element: Element) {
       const rect = range.getBoundingClientRect();
       if (rect.width < 1 || rect.height < 1) continue;
 
+      const absolute = toAbsoluteRect(rect);
+
       words.push({
         rcid,
         text: text.slice(start, end),
-        rect,
+        rect: absolute,
         start,
         end,
         node: element,

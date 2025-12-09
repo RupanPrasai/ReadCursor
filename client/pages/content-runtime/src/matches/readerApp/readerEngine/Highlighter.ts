@@ -28,10 +28,12 @@ export class Highlighter {
       opacity: '0',
     });
 
-    document.body.appendChild(this.element);
+    document.documentElement.appendChild(this.element);
   }
 
   highlightWord(word: WordGeometry) {
+    console.log('HIGHLIGHT WORD INVOKED ===');
+    console.log('WORD GEOMETRY', word);
     const rect = word.rect;
 
     const top = rect.top;
@@ -51,3 +53,4 @@ export class Highlighter {
     this.element.remove();
   }
 }
+

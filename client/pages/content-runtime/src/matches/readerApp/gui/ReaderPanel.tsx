@@ -1,10 +1,12 @@
 import { useDraggableResizable } from '../hooks/useDraggableResizable';
+import type { ReaderController } from '../readerEngine/controller';
 
 interface ReaderPanelProps {
   onDestroy: () => void;
+  controller: ReaderController;
 }
 
-export function ReaderPanel({ onDestroy }: ReaderPanelProps) {
+export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
   const { readerPanelRef, startDrag, startResize } = useDraggableResizable({
     minWidth: 300,
     maxWidth: 800,
@@ -24,6 +26,19 @@ export function ReaderPanel({ onDestroy }: ReaderPanelProps) {
       <div className="p-4">
         <h2 className="text-lg font-semibold">Reader Panel</h2>
         <p className="text-sm text-gray-600">Floating Panel</p>
+
+        {/* CONTROLS */}
+        <div className="flex gap-2">
+          <button className="rounded bg-green-600 px-3 py-1 text-white" onClick={() => controller.play()}>
+            Play
+          </button>
+          <button className="rounded bg-yellow-500 px-3 py-1 text-white" onClick={() => controller.pause()}>
+            Pause
+          </button>
+          <button className="rounded bg-red-600 px-3 py-1 text-white" onClick={() => controller.stop()}>
+            Stop
+          </button>
+        </div>
       </div>
 
       {/* Corners */}

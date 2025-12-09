@@ -15,8 +15,6 @@ let activeReactRoot: Root | null = null;
 const readableNodes = getReadableNodes();
 const wordGeometry = extractWordGeometryFromReadableNodes(readableNodes);
 
-console.log('Word Geometry:', wordGeometry);
-
 //
 //
 //
@@ -65,7 +63,7 @@ function initializeReaderPanel(): boolean {
   try {
     const reactRoot = initAppWithShadow({
       id: ROOT_ID,
-      app: <App destroyCallback={destroyReaderPanelInstance} />,
+      app: <App destroyCallback={destroyReaderPanelInstance} wordGeometry={wordGeometry} />,
       inlineCss,
     });
     activeReactRoot = reactRoot;

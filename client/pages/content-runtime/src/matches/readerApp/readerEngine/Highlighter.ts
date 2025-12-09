@@ -21,10 +21,10 @@ export class Highlighter {
     Object.assign(this.element.style, {
       position: 'absolute',
       background: 'rgba(255, 0, 0, 0.35)',
-      borderRadius: '4px',
+      borderRadius: '3px',
       pointerEvents: 'none',
       zIndex: '999999',
-      transition: 'transform 70ms linear, width 70ms linear, height 70ms linear',
+      transition: 'left 70ms linear, top 70ms linear, width 70ms linear, height 70ms linear, opacity 70ms linear',
       opacity: '0',
     });
 
@@ -32,16 +32,12 @@ export class Highlighter {
   }
 
   highlightWord(word: WordGeometry) {
-    console.log('HIGHLIGHT WORD INVOKED ===');
-    console.log('WORD GEOMETRY', word);
-    const rect = word.rect;
+    const { left, top, width, height } = word.rect;
 
-    const top = rect.top;
-    const left = rect.left;
-
-    this.element.style.transform = `translate(${left}px, ${top}px)`;
-    this.element.style.width = `${rect.width}px`;
-    this.element.style.height = `${rect.height}px`;
+    this.element.style.left = `${left}px`;
+    this.element.style.top = `${top}px`;
+    this.element.style.width = `${width}px`;
+    this.element.style.height = `${height}px`;
     this.element.style.opacity = '1';
   }
 
@@ -53,4 +49,3 @@ export class Highlighter {
     this.element.remove();
   }
 }
-

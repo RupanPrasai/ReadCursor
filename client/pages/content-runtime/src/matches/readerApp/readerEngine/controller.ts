@@ -65,7 +65,6 @@ export class ReaderController {
     }
 
     const currentWord = this.words[this.index];
-    console.log('CURRENT WORD FROM SCHEDULE NEXT', currentWord);
     this.highlighter.highlightWord(currentWord);
 
     this.index++;

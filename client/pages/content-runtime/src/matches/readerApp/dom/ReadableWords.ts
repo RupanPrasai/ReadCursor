@@ -37,6 +37,9 @@ export function extractWordsFromNode(element: Element) {
   const rcid = Number(element.getAttribute('data-rcid'));
   const words: any[] = [];
 
+  const blockRectRaw = element.getBoundingClientRect();
+  const blockRect = toAbsoluteRect(blockRectRaw);
+
   for (const textNode of walkTextNodes(element)) {
     const text = textNode.nodeValue!;
     const boundaries = getWordBoundaries(text);
@@ -54,6 +57,7 @@ export function extractWordsFromNode(element: Element) {
       words.push({
         rcid,
         text: text.slice(start, end),
+        blockRect,
         rect: absolute,
         start,
         end,

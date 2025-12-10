@@ -13,6 +13,9 @@ let activeReactRoot: Root | null = null;
 //
 
 const readableNodes = getReadableNodes();
+
+console.log('READABLE NODES ===', readableNodes);
+
 const wordGeometry = extractWordGeometryFromReadableNodes(readableNodes);
 
 //

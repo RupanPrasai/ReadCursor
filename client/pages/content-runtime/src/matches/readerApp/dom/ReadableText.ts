@@ -164,6 +164,7 @@ export function getReadableNodes(): Element[] {
   for (const id of readableIds) {
     const element = originalMap.get(id);
     if (element && isReadableFontSize(element)) {
+      element.classList.add('rc-highlightable');
       result.push(element);
     }
   }

@@ -63,9 +63,14 @@ export class Highlighter {
   highlightWord(currentWord: WordGeometry) {
     const { left, top, width, height } = currentWord.rect;
 
-    this.element.style.left = `${left}px`;
+    const padRatio = 0.05;
+    const horizontalPad = width * padRatio;
+    const paddedLeft = left - horizontalPad;
+    const paddedWidth = width + horizontalPad * 2;
+
+    this.element.style.left = `${paddedLeft}px`;
     this.element.style.top = `${top}px`;
-    this.element.style.width = `${width}px`;
+    this.element.style.width = `${paddedWidth}px`;
     this.element.style.height = `${height}px`;
     this.element.style.opacity = '1';
   }

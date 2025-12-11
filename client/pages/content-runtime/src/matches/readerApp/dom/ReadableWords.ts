@@ -39,6 +39,12 @@ export function extractWordsFromNode(element: Element) {
 
   const blockRectRaw = element.getBoundingClientRect();
   const blockRect = toAbsoluteRect(blockRectRaw);
+  const blockLocalRect = {
+    left: 0,
+    top: 0,
+    width: blockRect.width,
+    height: blockRect.height,
+  };
 
   for (const textNode of walkTextNodes(element)) {
     const text = textNode.nodeValue!;
@@ -65,6 +71,7 @@ export function extractWordsFromNode(element: Element) {
         rcid,
         text: text.slice(start, end),
         blockRect,
+        blockLocalRect,
         rect: absolute,
         localRect,
         start,

@@ -27,6 +27,12 @@ export interface WordGeometry {
     width: number;
     height: number;
   };
+  blockLocalRect: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
   start: number;
   end: number;
   node: Node;
@@ -39,7 +45,8 @@ export class Highlighter {
     const blockElement = word.node as HTMLElement;
 
     if (this.currentBlockElement && this.currentBlockElement !== blockElement) {
-      this.clearBlock(this.currentBlockElement);
+      this.clearWordHighlight(this.currentBlockElement);
+      this.clearBlockHighlight(this.currentBlockElement);
     }
 
     this.currentBlockElement = blockElement;
@@ -52,14 +59,31 @@ export class Highlighter {
     blockElement.style.setProperty('--hl-height', `${rect.height}px`);
   }
 
-  clearBlock(blockElement: HTMLElement) {
+  highlightBlock(word: any) {
+    const blockElement = word.node as HTMLElement;
+
+    const rect = word.blockLocalRect;
+
+    blockElement.style.setProperty('--block-left', `${rect.left}px`);
+    blockElement.style.setProperty('--block-top', `${rect.top}px`);
+    blockElement.style.setProperty('--block-width', `${rect.width}px`);
+    blockElement.style.setProperty('--block-height', `${rect.height}px`);
+  }
+
+  clearWordHighlight(blockElement: HTMLElement) {
     blockElement.style.setProperty('--hl-width', `0px`);
     blockElement.style.setProperty('--hl-height', `0px`);
   }
 
+  clearBlockHighlight(blockElement: HTMLElement) {
+    blockElement.style.setProperty('--block-width', `0px`);
+    blockElement.style.setProperty('--block-height', `0px`);
+  }
+
   clearAll() {
     if (this.currentBlockElement) {
-      this.clearBlock(this.currentBlockElement);
+      this.clearWordHighlight(this.currentBlockElement);
+      this.clearBlockHighlight(this.currentBlockElement);
       this.currentBlockElement = null;
     }
   }

@@ -21,6 +21,15 @@ export interface WordGeometry {
     right: number;
     bottom: number;
   };
+  localRect: {
+    x: number;
+    y: number;
+    top: number;
+    bottom: number;
+    right: number;
+    width: number;
+    height: number;
+  };
   start: number;
   end: number;
   node: Node;

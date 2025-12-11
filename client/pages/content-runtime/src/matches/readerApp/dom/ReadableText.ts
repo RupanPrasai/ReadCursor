@@ -52,7 +52,7 @@ function isReadableFontSize(element: Element): boolean {
   return true;
 }
 
-export function findTitleNode(title: string): HTMLElement | null {
+function findTitleNode(title: string): HTMLElement | null {
   if (!title) {
     return null;
   }
@@ -86,7 +86,7 @@ function labelDomNodes(): void {
   }
 }
 
-export function readDOM(): Set<number> {
+function readDOM(): Set<number> {
   labelDomNodes();
   const clone = document.cloneNode(true) as Document;
   const options = {
@@ -139,7 +139,7 @@ export function readDOM(): Set<number> {
   return readableIds;
 }
 
-export function buildNodeMap(): Map<number, Element> {
+function buildNodeMap(): Map<number, Element> {
   const map = new Map<number, Element>();
 
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
@@ -155,6 +155,35 @@ export function buildNodeMap(): Map<number, Element> {
   return map;
 }
 
+function injectHighlightableCSS() {
+  const style = document.createElement('style');
+
+  style.textContent = `
+    .rc-highlightable {
+      position: relative !important;
+      
+      background-image:
+        linear-gradient(transparent, transparent),
+        linear-gradient(rgba(255, 0, 0, 0.35), rgba(255, 0, 0, 0.35));
+      background-repeat: no-repeat;
+
+      --hl-left: 0px;
+      --hl-top: 0px;
+      --hl-width: 0px;
+      --hl-height: 0px;
+
+      background-position:
+        0 0,
+        var(--hl-left) var(--hl-top);
+      
+      background-size:
+        100% 100%,
+        var(--hl-width) var(--hl-height);
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 export function getReadableNodes(): Element[] {
   const readableIds = readDOM();
   const originalMap = buildNodeMap();
@@ -168,5 +197,6 @@ export function getReadableNodes(): Element[] {
       result.push(element);
     }
   }
+  injectHighlightableCSS();
   return result;
 }

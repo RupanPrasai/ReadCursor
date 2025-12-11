@@ -54,11 +54,19 @@ export function extractWordsFromNode(element: Element) {
 
       const absolute = toAbsoluteRect(rect);
 
+      const localRect = {
+        left: absolute.left - blockRect.left,
+        top: absolute.top - blockRect.top,
+        width: absolute.width,
+        height: absolute.height,
+      };
+
       words.push({
         rcid,
         text: text.slice(start, end),
         blockRect,
         rect: absolute,
+        localRect,
         start,
         end,
         node: element,

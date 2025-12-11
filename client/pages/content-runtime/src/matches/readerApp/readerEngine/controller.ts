@@ -65,6 +65,7 @@ export class ReaderController {
     }
 
     const currentWord = this.words[this.index];
+
     this.highlighter.highlightBlock(currentWord);
     this.highlighter.highlightWord(currentWord);
 

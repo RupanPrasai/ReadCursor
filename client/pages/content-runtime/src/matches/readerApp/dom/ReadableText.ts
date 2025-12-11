@@ -177,7 +177,7 @@ function injectHighlightableCSS() {
       --block-left: 0px;
       --block-top: 0px;
       --block-width: 0px;
-      -block-height: 0px;
+      --block-height: 0px;
 
       background-position:
         0 0,

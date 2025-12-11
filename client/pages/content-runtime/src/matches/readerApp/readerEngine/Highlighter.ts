@@ -62,6 +62,8 @@ export class Highlighter {
   highlightBlock(word: any) {
     const blockElement = word.node as HTMLElement;
 
+    console.log('HIGHLIGHT BLOCK INVOKED ===', word);
+
     const rect = word.blockLocalRect;
 
     blockElement.style.setProperty('--block-left', `${rect.left}px`);

@@ -22,11 +22,8 @@ export interface WordGeometry {
     bottom: number;
   };
   localRect: {
-    x: number;
-    y: number;
     top: number;
-    bottom: number;
-    right: number;
+    left: number;
     width: number;
     height: number;
   };

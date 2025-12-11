@@ -33,6 +33,40 @@ export interface WordGeometry {
 }
 
 export class Highlighter {
+  private currentBlockElement: HTMLElement | null = null;
+
+  highlightWord(word: any) {
+    const blockElement = word.node as HTMLElement;
+
+    if (this.currentBlockElement && this.currentBlockElement !== blockElement) {
+      this.clearBlock(this.currentBlockElement);
+    }
+
+    this.currentBlockElement = blockElement;
+
+    const rect = word.localRect;
+
+    blockElement.style.setProperty('--hl-left', `${rect.left}px`);
+    blockElement.style.setProperty('--hl-top', `${rect.top}px`);
+    blockElement.style.setProperty('--hl-width', `${rect.width}px`);
+    blockElement.style.setProperty('--hl-height', `${rect.height}px`);
+  }
+
+  clearBlock(blockElement: HTMLElement) {
+    blockElement.style.setProperty('--hl-width', `0px`);
+    blockElement.style.setProperty('--hl-height', `0px`);
+  }
+
+  clearAll() {
+    if (this.currentBlockElement) {
+      this.clearBlock(this.currentBlockElement);
+      this.currentBlockElement = null;
+    }
+  }
+}
+
+/*
+export class Highlighter {
   private element: HTMLDivElement;
   private blockElement: HTMLDivElement;
 
@@ -99,3 +133,4 @@ export class Highlighter {
     this.element.remove();
   }
 }
+*/

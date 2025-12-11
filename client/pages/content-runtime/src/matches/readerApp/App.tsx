@@ -13,7 +13,7 @@ export default function App({ destroyCallback, wordGeometry }: AppProps) {
 
   useEffect(() => {
     if (wordGeometry && Array.isArray(wordGeometry)) {
-      controller.load(wordGeometry, 120);
+      controller.load(wordGeometry, 300);
     }
   }, [controller, wordGeometry]);
   return (

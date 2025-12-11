@@ -1,3 +1,4 @@
+import { AutoScroll } from './AutoScroll';
 import { Highlighter } from './Highlighter';
 import type { WordGeometry } from './Highlighter';
 
@@ -7,9 +8,14 @@ export class ReaderController {
   private timer: number | null = null;
   private isPlaying = false;
   private msPerWord = 200;
-  private highlighter = new Highlighter();
 
-  constructor() { }
+  private autoScroll: AutoScroll;
+  private highlighter: Highlighter;
+
+  constructor() {
+    this.autoScroll = new AutoScroll();
+    this.highlighter = new Highlighter(this.autoScroll);
+  }
 
   load(words: WordGeometry[], wpm: number) {
     this.words = words;

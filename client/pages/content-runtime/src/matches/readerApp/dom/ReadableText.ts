@@ -164,8 +164,8 @@ function injectHighlightableCSS() {
       
       background-image:
         linear-gradient(transparent, transparent),
-        linear-gradient(rgba(255, 0, 0, 0.35), rgba(255, 0, 0, 0.35));
-        linear-gradient(rgba(0, 150, 255, 0.15), rgba(0, 150, 255, 0.15)); 
+        linear-gradient(rgba(255, 0, 0, 0.35), rgba(255, 0, 0, 0.35)),
+        linear-gradient(rgba(0, 150, 255, 0.15), rgba(0, 150, 255, 0.15));
 
       background-repeat: no-repeat;
 
@@ -181,12 +181,12 @@ function injectHighlightableCSS() {
 
       background-position:
         0 0,
-        var(--hl-left) var(--hl-top);
+        var(--hl-left) var(--hl-top),
         var(--block-left) var(--block-top);
       
       background-size:
         100% 100%,
-        var(--hl-width) var(--hl-height);
+        var(--hl-width) var(--hl-height),
         var(--block-width) var(--block-height);
     }
   `;

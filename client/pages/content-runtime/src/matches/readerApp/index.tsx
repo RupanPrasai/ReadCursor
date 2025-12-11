@@ -16,8 +16,6 @@ const readableNodes = getReadableNodes();
 
 const wordGeometry = extractWordGeometryFromReadableNodes(readableNodes);
 
-console.log('WORD GEOMETRY ===', wordGeometry);
-
 //
 //
 //

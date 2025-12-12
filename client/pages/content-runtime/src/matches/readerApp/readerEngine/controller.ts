@@ -1,72 +1,118 @@
 import { AutoScroll } from './AutoScroll';
 import { Highlighter } from './Highlighter';
+import { ReaderStateMachine } from './state';
 import type { WordGeometry } from './Highlighter';
+
+function logCaller() {
+  const stack = new Error().stack?.split('\n');
+
+  const caller = stack?.[3]?.trim();
+
+  console.log('CALLER:', caller);
+}
 
 export class ReaderController {
   private words: WordGeometry[] = [];
   private index = 0;
   private timer: number | null = null;
-  private isPlaying = false;
+
+  private state = new ReaderStateMachine();
+
   private msPerWord = 200;
 
   private autoScroll: AutoScroll;
   private highlighter: Highlighter;
 
   constructor() {
-    this.autoScroll = new AutoScroll();
+    this.autoScroll = new AutoScroll(this.state);
     this.highlighter = new Highlighter(this.autoScroll);
+
+    this.state.bindHandlers({
+      onPlay: () => this.startPlayback(),
+      onPause: () => this.pausePlayback(),
+      onStop: () => this.stopPlayback(),
+      onNextWord: () => this.advanceWord(),
+      onScrollStart: () => {
+        logCaller();
+        //console.log('[SCROLL START]', performance.now().toFixed(2), 'INDEX', this.index);
+        this.pausePlayback();
+      },
+      onScrollEnd: () => {
+        logCaller();
+        /*console.log(
+          '[SCROLL END]',
+          performance.now().toFixed(2),
+          'INDEX',
+          this.index,
+          'PAUSED??',
+          this.state.isPaused(),
+        );
+        */
+        if (this.state.isPaused()) {
+          return;
+        }
+        this.startPlayback();
+      },
+    });
   }
 
   load(words: WordGeometry[], wpm: number) {
     this.words = words;
     this.index = 0;
     this.msPerWord = 60000 / wpm;
+    this.state.setReady();
   }
 
   play() {
-    if (this.isPlaying) {
-      return;
-    }
-
-    this.isPlaying = true;
-    this.scheduleNext();
+    this.state.play();
   }
 
   pause() {
-    this.isPlaying = false;
-
-    if (this.timer !== null) {
-      clearTimeout(this.timer);
-      this.timer = null;
-    }
-  }
-
-  resume() {
-    if (this.isPlaying) {
-      return;
-    }
-
-    this.isPlaying = true;
-    this.scheduleNext();
+    this.state.pause();
   }
 
   stop() {
-    this.isPlaying = false;
-    this.index = 0;
+    this.state.stop();
+    this.state.setReady();
+  }
 
+  private startPlayback() {
+    if (this.timer !== null) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+    this.scheduleNext();
+  }
+
+  private pausePlayback() {
     if (this.timer !== null) {
       clearTimeout(this.timer);
       this.timer = null;
     }
   }
 
+  private stopPlayback() {
+    this.pausePlayback();
+    this.index = 0;
+    this.highlighter.clearAll();
+  }
+
+  private advanceWord() {
+    this.scheduleNext();
+  }
+
   private scheduleNext() {
-    if (!this.isPlaying) {
+    if (this.timer !== null) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+
+    if (!this.state.isPlaying()) {
       return;
     }
 
     if (this.index >= this.words.length) {
-      this.stop();
+      this.state.stop();
       return;
     }
 
@@ -78,7 +124,7 @@ export class ReaderController {
     this.index++;
 
     this.timer = window.setTimeout(() => {
-      this.scheduleNext();
+      this.state.nextWord();
     }, this.msPerWord);
   }
 
@@ -88,7 +134,10 @@ export class ReaderController {
     }
 
     this.index = index;
-    this.highlighter.highlightWord(this.words[this.index]);
+
+    const currentWord = this.words[this.index];
+    this.highlighter.highlightBlock(currentWord);
+    this.highlighter.highlightWord(currentWord);
   }
 
   setWPM(wpm: number) {

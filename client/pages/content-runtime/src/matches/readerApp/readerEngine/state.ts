@@ -43,7 +43,7 @@ export class ReaderStateMachine {
   }
 
   setReady() {
-    if (this.state === 'IDLE') {
+    if (this.state === 'IDLE' || this.state === 'ENDED') {
       this.state = 'READY';
     }
   }
@@ -52,6 +52,38 @@ export class ReaderStateMachine {
     if (this.state === 'READY' || this.state === 'PAUSED') {
       this.state = 'PLAYING';
       this.onPlay?.();
+    }
+  }
+
+  pause() {
+    if (this.state === 'PLAYING' || this.state === 'SCROLLING') {
+      this.state = 'PAUSED';
+      this.onPause?.();
+    }
+  }
+
+  stop() {
+    this.state = 'ENDED';
+    this.onStop?.();
+  }
+
+  nextWord() {
+    if (this.state === 'PLAYING') {
+      this.onNextWord?.();
+    }
+  }
+
+  beginScroll() {
+    if (this.state === 'PLAYING') {
+      this.state = 'SCROLLING';
+      this.onScrollStart?.();
+    }
+  }
+
+  endScroll() {
+    if (this.state === 'SCROLLING') {
+      this.state = 'PLAYING';
+      this.onScrollEnd?.();
     }
   }
 }

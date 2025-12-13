@@ -3,14 +3,6 @@ import { Highlighter } from './Highlighter';
 import { ReaderStateMachine } from './state';
 import type { WordGeometry } from './Highlighter';
 
-export function logCaller() {
-  const stack = new Error().stack?.split('\n');
-
-  const caller = stack?.[3]?.trim();
-
-  console.log('CALLER:', caller);
-}
-
 export class ReaderController {
   private words: WordGeometry[] = [];
   private index = 0;

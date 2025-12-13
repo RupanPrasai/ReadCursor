@@ -3,7 +3,7 @@ import { Highlighter } from './Highlighter';
 import { ReaderStateMachine } from './state';
 import type { WordGeometry } from './Highlighter';
 
-function logCaller() {
+export function logCaller() {
   const stack = new Error().stack?.split('\n');
 
   const caller = stack?.[3]?.trim();
@@ -24,7 +24,7 @@ export class ReaderController {
   private highlighter: Highlighter;
 
   constructor() {
-    this.autoScroll = new AutoScroll(this.state);
+    this.autoScroll = new AutoScroll();
     this.highlighter = new Highlighter(this.autoScroll);
 
     this.state.bindHandlers({
@@ -32,27 +32,6 @@ export class ReaderController {
       onPause: () => this.pausePlayback(),
       onStop: () => this.stopPlayback(),
       onNextWord: () => this.advanceWord(),
-      onScrollStart: () => {
-        logCaller();
-        //console.log('[SCROLL START]', performance.now().toFixed(2), 'INDEX', this.index);
-        this.pausePlayback();
-      },
-      onScrollEnd: () => {
-        logCaller();
-        /*console.log(
-          '[SCROLL END]',
-          performance.now().toFixed(2),
-          'INDEX',
-          this.index,
-          'PAUSED??',
-          this.state.isPaused(),
-        );
-        */
-        if (this.state.isPaused()) {
-          return;
-        }
-        this.startPlayback();
-      },
     });
   }
 

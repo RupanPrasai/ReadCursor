@@ -1,4 +1,4 @@
-export type ReaderState = 'IDLE' | 'READY' | 'PLAYING' | 'SCROLLING' | 'PAUSED' | 'ENDED';
+export type ReaderState = 'IDLE' | 'READY' | 'PLAYING' | 'PAUSED' | 'ENDED';
 
 export class ReaderStateMachine {
   private state: ReaderState = 'IDLE';
@@ -7,23 +7,12 @@ export class ReaderStateMachine {
   private onPause: (() => void) | null = null;
   private onStop: (() => void) | null = null;
   private onNextWord: (() => void) | null = null;
-  private onScrollStart: (() => void) | null = null;
-  private onScrollEnd: (() => void) | null = null;
 
-  bindHandlers(handlers: {
-    onPlay?: () => void;
-    onPause?: () => void;
-    onStop?: () => void;
-    onNextWord?: () => void;
-    onScrollStart?: () => void;
-    onScrollEnd?: () => void;
-  }) {
+  bindHandlers(handlers: { onPlay?: () => void; onPause?: () => void; onStop?: () => void; onNextWord?: () => void }) {
     this.onPlay = handlers.onPlay ?? null;
     this.onPause = handlers.onPause ?? null;
     this.onStop = handlers.onStop ?? null;
     this.onNextWord = handlers.onNextWord ?? null;
-    this.onScrollStart = handlers.onScrollStart ?? null;
-    this.onScrollEnd = handlers.onScrollEnd ?? null;
   }
 
   getState(): ReaderState {
@@ -36,10 +25,6 @@ export class ReaderStateMachine {
 
   isPaused() {
     return this.state === 'PAUSED';
-  }
-
-  isScrolling() {
-    return this.state === 'SCROLLING';
   }
 
   setReady() {
@@ -56,7 +41,7 @@ export class ReaderStateMachine {
   }
 
   pause() {
-    if (this.state === 'PLAYING' || this.state === 'SCROLLING') {
+    if (this.state === 'PLAYING') {
       this.state = 'PAUSED';
       this.onPause?.();
     }
@@ -70,20 +55,6 @@ export class ReaderStateMachine {
   nextWord() {
     if (this.state === 'PLAYING') {
       this.onNextWord?.();
-    }
-  }
-
-  beginScroll() {
-    if (this.state === 'PLAYING') {
-      this.state = 'SCROLLING';
-      this.onScrollStart?.();
-    }
-  }
-
-  endScroll() {
-    if (this.state === 'SCROLLING') {
-      this.state = 'PLAYING';
-      this.onScrollEnd?.();
     }
   }
 }

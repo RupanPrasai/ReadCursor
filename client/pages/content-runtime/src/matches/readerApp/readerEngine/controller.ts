@@ -3,6 +3,11 @@ import { Highlighter } from './Highlighter';
 import { ReaderStateMachine } from './state';
 import type { WordGeometry } from './Highlighter';
 
+function clampInt(raw: number, min: number, max: number) {
+  const num = Number.isFinite(raw) ? Math.trunc(raw) : min;
+  return Math.max(min, Math.min(max, num));
+}
+
 export class ReaderController {
   private words: WordGeometry[] = [];
   private index = 0;
@@ -10,7 +15,11 @@ export class ReaderController {
 
   private state = new ReaderStateMachine();
 
-  private msPerWord = 200;
+  private wpm = 300;
+
+  private get msPerWord() {
+    return Math.round(60000 / this.wpm);
+  }
 
   private autoScroll: AutoScroll;
   private highlighter: Highlighter;
@@ -27,10 +36,9 @@ export class ReaderController {
     });
   }
 
-  load(words: WordGeometry[], wpm: number) {
+  load(words: WordGeometry[]) {
     this.words = words;
     this.index = 0;
-    this.msPerWord = 60000 / wpm;
     this.state.setReady();
   }
 
@@ -111,7 +119,20 @@ export class ReaderController {
     this.highlighter.highlightWord(currentWord);
   }
 
-  setWPM(wpm: number) {
-    this.msPerWord = 60000 / wpm;
+  setWPM(raw: number) {
+    const wpm = clampInt(raw, 100, 800);
+    if (wpm === this.wpm) {
+      return;
+    }
+
+    this.wpm = wpm;
+
+    if (this.state.isPlaying()) {
+      if (this.timer !== null) {
+        clearTimeout(this.timer);
+        this.timer = null;
+      }
+      this.timer = window.setTimeout(() => this.state.nextWord(), this.msPerWord);
+    }
   }
 }

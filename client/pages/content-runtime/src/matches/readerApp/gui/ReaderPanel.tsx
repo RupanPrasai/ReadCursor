@@ -1,5 +1,5 @@
 import { useDraggableResizable } from '../hooks/useDraggableResizable';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReaderController } from '../readerEngine/controller';
 
 interface ReaderPanelProps {
@@ -7,10 +7,10 @@ interface ReaderPanelProps {
   controller: ReaderController;
 }
 
-const MIN_WPM = 100;
-const MAX_WPM = 800;
+const MIN_WPM = 50;
+const MAX_WPM = 450;
 const STEP_WPM = 10;
-const WPM_PRESETS = [200, 250, 300, 350, 400];
+const WPM_PRESETS = [100, 150, 200, 250, 300];
 
 function clampInt(raw: number, min: number, max: number) {
   const num = Number.isFinite(raw) ? Math.trunc(raw) : min;
@@ -25,8 +25,8 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
     maxHeight: 800,
   });
 
-  const [wpm, setWpm] = useState<number>(300);
-  const [wpmText, setWpmText] = useState<string>('300');
+  const [wpm, setWpm] = useState<number>(150);
+  const [wpmText, setWpmText] = useState<string>('150');
 
   useEffect(() => {
     setWpmText(String(wpm));
@@ -73,13 +73,28 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
       </div>
 
       {/* WPM */}
-      <div className="mt-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-medium">Speed</label>
-          <span className="text-sm text-gray-700">{wpm} WPM</span>
-        </div>
+      <div className="mt-4 px-6">
+        <div className="mx-auto flex max-w-sm flex-col items-center gap-3">
+          <div className="text-lg font-semibold text-gray-900">Speed</div>
+          <div className="flex items-center justify-center gap-2">
+            <input
+              type="number"
+              min={MIN_WPM}
+              max={MAX_WPM}
+              step={STEP_WPM}
+              value={wpmText}
+              onChange={event => setWpmText(event.target.value)}
+              onBlur={commitWpmText}
+              onKeyDown={event => {
+                if (event.key === 'Enter') (event.currentTarget as HTMLInputElement).blur();
+              }}
+              className="w-24 rounded border border-gray-300 px-2 py-1 text-center text-sm"
+              aria-label="WPM input"
+            />
+            <span className="text-sm text-gray-700">WPM</span>
+          </div>
 
-        <div className="flex items-center gap-2">
+          {/* WPM Slider */}
           <input
             type="range"
             min={MIN_WPM}
@@ -87,35 +102,22 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
             step={STEP_WPM}
             value={wpm}
             onChange={event => setWpm(Number(event.target.value))}
-            className="w-full"
+            className="w-42"
             aria-label="Words per minute"
           />
-          <input
-            type="number"
-            min={MIN_WPM}
-            max={MAX_WPM}
-            step={STEP_WPM}
-            value={wpmText}
-            onChange={event => setWpmText(event.target.value)}
-            onBlur={commitWpmText}
-            onKeyDown={event => {
-              if (event.key === 'Enter') (event.currentTarget as HTMLInputElement).blur();
-            }}
-            className="w-24 rounded border border-gray-300 px-2 py-1 text-sm"
-            aria-label="WPM input"
-          />
-        </div>
 
-        <div className="flex flex-wrap gap-2">
-          {WPM_PRESETS.map(preset => (
-            <button
-              key={preset}
-              className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100"
-              onClick={() => setWpm(preset)}
-              type="button">
-              {preset}
-            </button>
-          ))}
+          {/* WPM Presets */}
+          <div className="flex flex-wrap justify-center gap-2">
+            {WPM_PRESETS.map(preset => (
+              <button
+                key={preset}
+                className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100"
+                onClick={() => setWpm(preset)}
+                type="button">
+                {preset}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

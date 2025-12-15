@@ -14,7 +14,7 @@ export default function App({ destroyCallback, wordGeometry }: AppProps) {
   useEffect(() => {
     if (wordGeometry && Array.isArray(wordGeometry)) {
       controller.load(wordGeometry);
-      controller.setWPM(300);
+      controller.setWPM(150);
     }
   }, [controller, wordGeometry]);
   return (

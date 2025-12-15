@@ -8,6 +8,9 @@ function clampInt(raw: number, min: number, max: number) {
   return Math.max(min, Math.min(max, num));
 }
 
+const MIN_WPM = 50;
+const MAX_WPM = 450;
+
 export class ReaderController {
   private words: WordGeometry[] = [];
   private index = 0;
@@ -16,6 +19,8 @@ export class ReaderController {
   private state = new ReaderStateMachine();
 
   private wpm = 300;
+
+  private resumePending = false;
 
   private get msPerWord() {
     return Math.round(60000 / this.wpm);
@@ -36,13 +41,23 @@ export class ReaderController {
     });
   }
 
+  private clearTimer() {
+    if (this.timer !== null) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+  }
+
   load(words: WordGeometry[]) {
     this.words = words;
     this.index = 0;
+    this.resumePending = false;
+    this.clearTimer();
     this.state.setReady();
   }
 
   play() {
+    this.resumePending = this.state.isPaused();
     this.state.play();
   }
 
@@ -51,23 +66,25 @@ export class ReaderController {
   }
 
   stop() {
+    this.resumePending = false;
     this.state.stop();
     this.state.setReady();
   }
 
   private startPlayback() {
-    if (this.timer !== null) {
-      clearTimeout(this.timer);
-      this.timer = null;
+    this.clearTimer();
+
+    if (this.resumePending) {
+      this.resumePending = false;
+      this.scheduleTickOnly();
+      return;
     }
+
     this.scheduleNext();
   }
 
   private pausePlayback() {
-    if (this.timer !== null) {
-      clearTimeout(this.timer);
-      this.timer = null;
-    }
+    this.clearTimer();
   }
 
   private stopPlayback() {
@@ -80,18 +97,30 @@ export class ReaderController {
     this.scheduleNext();
   }
 
-  private scheduleNext() {
-    if (this.timer !== null) {
-      clearTimeout(this.timer);
-      this.timer = null;
+  private scheduleTickOnly() {
+    if (!this.state.isPlaying()) {
+      return;
     }
+
+    if (this.index >= this.words.length) {
+      this.stop();
+      return;
+    }
+
+    this.timer = window.setTimeout(() => {
+      this.state.nextWord();
+    }, this.msPerWord);
+  }
+
+  private scheduleNext() {
+    this.clearTimer();
 
     if (!this.state.isPlaying()) {
       return;
     }
 
     if (this.index >= this.words.length) {
-      this.state.stop();
+      this.stop();
       return;
     }
 
@@ -120,7 +149,7 @@ export class ReaderController {
   }
 
   setWPM(raw: number) {
-    const wpm = clampInt(raw, 100, 800);
+    const wpm = clampInt(raw, MIN_WPM, MAX_WPM);
     if (wpm === this.wpm) {
       return;
     }
@@ -128,11 +157,8 @@ export class ReaderController {
     this.wpm = wpm;
 
     if (this.state.isPlaying()) {
-      if (this.timer !== null) {
-        clearTimeout(this.timer);
-        this.timer = null;
-      }
-      this.timer = window.setTimeout(() => this.state.nextWord(), this.msPerWord);
+      this.clearTimer();
+      this.scheduleTickOnly();
     }
   }
 }

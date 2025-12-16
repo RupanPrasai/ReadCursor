@@ -24,6 +24,19 @@ export default function App({ destroyCallback, wordGeometry }: AppProps) {
     loadedRef.current = true;
   }, [controller, wordGeometry]);
 
+  useEffect(() => {
+    const onStartHere = (event: any) => {
+      const lastCtx = event?.detail?.lastCtx;
+      if (!lastCtx) {
+        return
+      }
+
+      console.log("[Controller Start From Here Code]:", lastCtx);
+    }
+
+    window.addEventListener('readcursor:startHere', onStartHere);
+  }, [controller]);
+
   useEffect(() => () => controller.stop(), [controller]);
 
   const handleDestroy = () => {

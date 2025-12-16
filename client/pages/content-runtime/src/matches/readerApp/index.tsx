@@ -79,47 +79,30 @@ if (existingSingleton?.dispose) {
 
 initializeReaderPanel();
 
-let lastCtx: any = null;
+let lastCtx: {
+  ts: number;
+  pageX: number;
+  pageY: number;
+  rcid: string | null;
+  selectionText: string | null;
+} | null = null;
 
 window.addEventListener(
   'contextmenu',
   event => {
     const target = event.target as HTMLElement | null;
-    const closestRcidElement = target?.closest?.('[data-rcid]') as HTMLElement | null;
+    const rcidElement = target?.closest?.('[data-rcid]') as HTMLElement | null;
 
     const selection = window.getSelection();
-    const hasSelection = !!selection && selection.rangeCount > 0 && !selection.isCollapsed;
+    const selectionText = selection && selection.rangeCount > 0 ? selection.toString() : '';
 
     lastCtx = {
       ts: Date.now(),
-      clientXY: { x: event.clientX, y: event.clientY },
-      pageXY: { x: (event as MouseEvent).pageX, y: (event as MouseEvent).pageY },
-      button: (event as MouseEvent).button,
-      meta: {
-        altKey: event.altKey,
-        ctrlKey: event.ctrlKey,
-        shiftKey: event.shiftKey,
-        metaKey: event.metaKey,
-      },
-      target: target
-        ? {
-          tag: target.tagName,
-          id: target.id || null,
-          className: target.className || null,
-          role: target.getAttribute('role'),
-        }
-        : null,
-
-      rcid: closestRcidElement?.getAttribute('data-rcid') ?? null,
-      rcidTag: closestRcidElement?.tagName ?? null,
-      rcidId: closestRcidElement?.id ?? null,
-      rcidClass: closestRcidElement?.className ?? null,
-
-      hasSelection,
-      selectionTextPreview: hasSelection ? selection!.toString().slice(0, 120) : null,
+      pageX: (event as MouseEvent).clientX + window.scrollX,
+      pageY: (event as MouseEvent).clientY + window.scrollY,
+      rcid: rcidElement?.getAttribute('data-rcid') ?? null,
+      selectionText: selectionText ? selectionText.slice(0, 200) : null,
     };
-
-    console.log('[ReadCursor] contextmenu event caputred:', lastCtx);
   },
   { capture: true },
 );
@@ -129,17 +112,11 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
     return;
   }
 
-  console.log('[ReadCursor] message from SW:', {
-    msg,
-    sender,
-    lastCtx,
-  });
+  console.log('[ReadCursor] START_HERE using lastCtx:', lastCtx);
 
-  const selection = window.getSelection();
-
-  console.log('[ReadCursor] selection NOW:', {
-    hasSelection: !!selection && selection.rangeCount > 0 && !selection.isCollapsed,
-    textPreview: selection ? selection.toString().slice(0, 200) : null,
-  });
+  window.dispatchEvent(
+    new CustomEvent('readcursor:startHere', {
+      detail: { lastCtx },
+    }),
+  );
 });
-

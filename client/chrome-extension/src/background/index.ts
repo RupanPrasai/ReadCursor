@@ -18,14 +18,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
   chrome.tabs.sendMessage(tab.id, {
     type: 'START_FROM_SELECTION',
-    info,
-    tab: {
-      id: tab.id,
-      url: tab.url,
-      title: tab.title,
-      active: tab.active,
-      windowId: tab.windowId,
-    },
     ts: Date.now(),
   });
 });

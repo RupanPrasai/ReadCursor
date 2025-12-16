@@ -22,6 +22,8 @@ export class ReaderController {
 
   private resumePending = false;
 
+  private rangeByRcid = new Map<string, { start: number; end: number }>();
+
   private get msPerWord() {
     return Math.round(60000 / this.wpm);
   }
@@ -53,6 +55,18 @@ export class ReaderController {
     this.index = 0;
     this.resumePending = false;
     this.clearTimer();
+
+    this.rangeByRcid.clear();
+    for (let i = 0; i < words.length; i++) {
+      const rcid = String(words[i].rcid);
+      const existing = this.rangeByRcid.get(rcid);
+      if (!existing) {
+        this.rangeByRcid.set(rcid, { start: i, end: i + 1 });
+      } else {
+        existing.end = i + 1;
+      }
+    }
+
     this.state.setReady();
   }
 

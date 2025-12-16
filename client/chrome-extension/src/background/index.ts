@@ -8,7 +8,7 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: 'readcursor_start_here',
     title: 'Start reading from here',
-    contexts: ['selection'],
+    contexts: ['selection', 'page'],
   });
 });
 
@@ -18,7 +18,15 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
   chrome.tabs.sendMessage(tab.id, {
     type: 'START_FROM_SELECTION',
-    text: info.selectionText ?? '',
+    info,
+    tab: {
+      id: tab.id,
+      url: tab.url,
+      title: tab.title,
+      active: tab.active,
+      windowId: tab.windowId,
+    },
+    ts: Date.now(),
   });
 });
 

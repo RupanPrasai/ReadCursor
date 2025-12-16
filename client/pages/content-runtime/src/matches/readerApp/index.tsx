@@ -79,16 +79,67 @@ if (existingSingleton?.dispose) {
 
 initializeReaderPanel();
 
-/*
-chrome.runtime.onMessage.addListener(swMessage => {
-  console.log('[ReadCursor] Runtime message received:', swMessage);
+let lastCtx: any = null;
 
-  if (swMessage.type === 'START_FROM_SELECTION') {
-    window.dispatchEvent(new CustomEvent('readcursor:startFromSelection', { detail: swMessage }));
+window.addEventListener(
+  'contextmenu',
+  event => {
+    const target = event.target as HTMLElement | null;
+    const closestRcidElement = target?.closest?.('[data-rcid]') as HTMLElement | null;
+
+    const selection = window.getSelection();
+    const hasSelection = !!selection && selection.rangeCount > 0 && !selection.isCollapsed;
+
+    lastCtx = {
+      ts: Date.now(),
+      clientXY: { x: event.clientX, y: event.clientY },
+      pageXY: { x: (event as MouseEvent).pageX, y: (event as MouseEvent).pageY },
+      button: (event as MouseEvent).button,
+      meta: {
+        altKey: event.altKey,
+        ctrlKey: event.ctrlKey,
+        shiftKey: event.shiftKey,
+        metaKey: event.metaKey,
+      },
+      target: target
+        ? {
+          tag: target.tagName,
+          id: target.id || null,
+          className: target.className || null,
+          role: target.getAttribute('role'),
+        }
+        : null,
+
+      rcid: closestRcidElement?.getAttribute('data-rcid') ?? null,
+      rcidTag: closestRcidElement?.tagName ?? null,
+      rcidId: closestRcidElement?.id ?? null,
+      rcidClass: closestRcidElement?.className ?? null,
+
+      hasSelection,
+      selectionTextPreview: hasSelection ? selection!.toString().slice(0, 120) : null,
+    };
+
+    console.log('[ReadCursor] contextmenu event caputred:', lastCtx);
+  },
+  { capture: true },
+);
+
+chrome.runtime.onMessage.addListener((msg, sender) => {
+  if (msg?.type !== 'START_FROM_SELECTION') {
+    return;
   }
+
+  console.log('[ReadCursor] message from SW:', {
+    msg,
+    sender,
+    lastCtx,
+  });
+
+  const selection = window.getSelection();
+
+  console.log('[ReadCursor] selection NOW:', {
+    hasSelection: !!selection && selection.rangeCount > 0 && !selection.isCollapsed,
+    textPreview: selection ? selection.toString().slice(0, 200) : null,
+  });
 });
 
-window.addEventListener('readcursor:startFromSelection', (event: any) => {
-  console.log('[ReadCursor TEST] Received SW Message:', event.detail);
-});
-*/

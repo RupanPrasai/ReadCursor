@@ -10,6 +10,7 @@ interface AppProps {
 
 export default function App({ destroyCallback, wordGeometry }: AppProps) {
   const [controller] = useState(() => new ReaderController());
+  const pendingStartRef = useRef<any>(null);
   const loadedRef = useRef(false);
 
   useEffect(() => {
@@ -22,19 +23,30 @@ export default function App({ destroyCallback, wordGeometry }: AppProps) {
     controller.load(wordGeometry);
     controller.setWPM(150);
     loadedRef.current = true;
+
+    if (pendingStartRef.current) {
+      controller.startFromHere(pendingStartRef.current);
+      pendingStartRef.current = null;
+    }
   }, [controller, wordGeometry]);
 
   useEffect(() => {
     const onStartHere = (event: any) => {
       const lastCtx = event?.detail?.lastCtx;
       if (!lastCtx) {
-        return
+        return;
       }
 
-      console.log("[Controller Start From Here Code]:", lastCtx);
-    }
+      if (!loadedRef.current) {
+        pendingStartRef.current = lastCtx;
+        return;
+      }
+
+      controller.startFromHere(lastCtx);
+    };
 
     window.addEventListener('readcursor:startHere', onStartHere);
+    return () => window.removeEventListener('readcursor:startHere', onStartHere);
   }, [controller]);
 
   useEffect(() => () => controller.stop(), [controller]);

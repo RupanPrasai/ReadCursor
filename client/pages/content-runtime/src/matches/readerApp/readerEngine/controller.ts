@@ -85,6 +85,88 @@ export class ReaderController {
     this.state.setReady();
   }
 
+  startFromHere(lastCtx: {
+    rcid?: string | number | null;
+    clientX: number;
+    clientY: number;
+    selStartChar?: number | null;
+    selTokens?: string[];
+  }) {
+    const rcid = lastCtx.rcid == null ? null : String(lastCtx.rcid);
+    if (!rcid) return;
+
+    const range = this.rangeByRcid.get(rcid);
+    if (!range) return;
+
+    let bestI: number | null = null;
+
+    const selStartChar = lastCtx.selStartChar;
+    if (typeof selStartChar === 'number' && Number.isFinite(selStartChar)) {
+      for (let i = range.start; i < range.end; i++) {
+        const w = this.words[i] as any;
+        if (w.start <= selStartChar && selStartChar < w.end) {
+          bestI = i;
+          break;
+        }
+      }
+
+      if (bestI == null) {
+        let bestDelta = Infinity;
+        for (let i = range.start; i < range.end; i++) {
+          const w = this.words[i] as any;
+          const d = Math.abs(w.start - selStartChar);
+          if (d < bestDelta) {
+            bestDelta = d;
+            bestI = i;
+          }
+        }
+      }
+    }
+
+    if (bestI == null) {
+      const { clientX, clientY } = lastCtx;
+
+      const dist2ToRect = (x: number, y: number, rect: any) => {
+        const left = rect.left,
+          top = rect.top;
+        const right = rect.right ?? rect.left + rect.width;
+        const bottom = rect.bottom ?? rect.top + rect.height;
+        const dx = x < left ? left - x : x > right ? x - right : 0;
+        const dy = y < top ? top - y : y > bottom ? y - bottom : 0;
+        return dx * dx + dy * dy;
+      };
+
+      let bestD = Infinity;
+      let fallbackI = range.start;
+
+      for (let i = range.start; i < range.end; i++) {
+        const rect = (this.words[i] as any).rect;
+        if (!rect) continue;
+        const d = dist2ToRect(clientX, clientY, rect);
+        if (d < bestD) {
+          bestD = d;
+          fallbackI = i;
+          if (bestD === 0) break;
+        }
+      }
+
+      bestI = fallbackI;
+    }
+
+    const wasPlaying = this.state.isPlaying();
+
+    this.clearTimer();
+    this.resumePending = false;
+    this.highlighter.clearAll();
+    this.index = bestI!;
+
+    if (wasPlaying) {
+      this.scheduleNext();
+    } else {
+      this.state.play();
+    }
+  }
+
   private startPlayback() {
     this.clearTimer();
 

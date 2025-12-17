@@ -81,27 +81,53 @@ initializeReaderPanel();
 
 let lastCtx: {
   ts: number;
-  pageX: number;
-  pageY: number;
+  clientX: number;
+  clientY: number;
   rcid: string | null;
-  selectionText: string | null;
+  selStartChar: number | null;
+  selTokens?: string[];
 } | null = null;
 
 window.addEventListener(
   'contextmenu',
   event => {
+    const mouse = event as MouseEvent;
     const target = event.target as HTMLElement | null;
-    const rcidElement = target?.closest?.('[data-rcid]') as HTMLElement | null;
 
-    const selection = window.getSelection();
-    const selectionText = selection && selection.rangeCount > 0 ? selection.toString() : '';
+    const sel = window.getSelection();
+    const range = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
+
+    const startEl = range
+      ? range.startContainer.nodeType === Node.ELEMENT_NODE
+        ? (range.startContainer as Element)
+        : (range.startContainer.parentElement as Element | null)
+      : null;
+
+    const rcidElement =
+      (startEl?.closest?.('[data-rcid]') as HTMLElement | null) ??
+      (target?.closest?.('[data-rcid]') as HTMLElement | null);
+
+    const rcid = rcidElement?.getAttribute('data-rcid') ?? null;
+
+    let selStartChar: number | null = null;
+
+    if (rcidElement && sel && range && !sel.isCollapsed) {
+      try {
+        const pre = document.createRange();
+        pre.selectNodeContents(rcidElement);
+        pre.setEnd(range.startContainer, range.startOffset);
+        selStartChar = pre.toString().length;
+      } catch {
+        selStartChar = null;
+      }
+    }
 
     lastCtx = {
       ts: Date.now(),
-      pageX: (event as MouseEvent).clientX + window.scrollX,
-      pageY: (event as MouseEvent).clientY + window.scrollY,
-      rcid: rcidElement?.getAttribute('data-rcid') ?? null,
-      selectionText: selectionText ? selectionText.slice(0, 200) : null,
+      rcid,
+      clientX: mouse.clientX,
+      clientY: mouse.clientY,
+      selStartChar,
     };
   },
   { capture: true },

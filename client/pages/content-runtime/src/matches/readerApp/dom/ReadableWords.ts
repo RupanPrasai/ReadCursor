@@ -1,3 +1,17 @@
+const __basisByRcid = new Map<number, 'client' | 'page' | 'unknown'>();
+const __debugOnceByRcid = new Set<number>();
+
+function guessBasis(top: number) {
+  const pad = 50;
+  const clientOk = top >= -pad && top <= window.innerHeight + pad;
+  const pageOk = top - window.scrollY >= -pad && top - window.scrollY <= window.innerHeight + pad;
+
+  if (pageOk && !clientOk) return 'page';
+  if (clientOk && !pageOk) return 'client';
+  if (clientOk && pageOk) return 'ambiguous';
+  return 'unknown';
+}
+
 export function* walkTextNodes(root: Element): Generator<Text> {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
@@ -59,6 +73,50 @@ export function extractWordsFromNode(element: Element) {
       if (rect.width < 1 || rect.height < 1) continue;
 
       const absolute = toAbsoluteRect(rect);
+
+      /* DEBUG LOG
+       *
+       *
+       *
+       */
+
+      if (!__debugOnceByRcid.has(rcid)) {
+        __debugOnceByRcid.add(rcid);
+        console.log('[rect-basis]', {
+          rcid,
+          word: text.slice(start, end),
+          rectTop: rect.top, // client-space
+          absTop: absolute.top, // page-space
+          scrollY: window.scrollY,
+          diff: absolute.top - rect.top, // should be ~scrollY
+        });
+      }
+
+      const basis = guessBasis(absolute.top);
+      if (!__basisByRcid.has(rcid)) {
+        __basisByRcid.set(rcid, basis === 'ambiguous' ? 'unknown' : (basis as any));
+        console.log('[rect-store]', {
+          rcid,
+          word: text.slice(start, end),
+          absTop: absolute.top,
+          absLeft: absolute.left,
+          scrollY: window.scrollY,
+          innerH: window.innerHeight,
+          topMinusScrollY: absolute.top - window.scrollY,
+          basis,
+        });
+      } else {
+        const prev = __basisByRcid.get(rcid)!;
+        const cur = basis === 'ambiguous' ? prev : (basis as any);
+        if (prev !== 'unknown' && cur !== 'unknown' && prev !== cur) {
+          console.warn('[rect-mixed-basis]', { rcid, prev, cur, word: text.slice(start, end) });
+        }
+      }
+
+      /* DEBUG LOG END
+       *
+       *
+       */
 
       const localRect = {
         left: absolute.left - blockRect.left,

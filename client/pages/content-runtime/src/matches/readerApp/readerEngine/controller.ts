@@ -96,15 +96,19 @@ export class ReaderController {
     const rcid = lastCtx.rcid == null ? null : String(lastCtx.rcid);
     if (!rcid) return;
 
+    // Range fallback: if rcid not present in rangeByRcid, search all words
     const range = this.rangeByRcid.get(rcid);
-    if (!range) return;
+    const start = range?.start ?? 0;
+    const end = range?.end ?? this.words.length;
 
     const selStartChar = lastCtx.selStartChar;
 
+    // ---------------- char-based candidate (keep as fallback) ----------------
     let bestCharI: number | null = null;
 
     if (typeof selStartChar === 'number' && Number.isFinite(selStartChar)) {
-      for (let i = range.start; i < range.end; i++) {
+      // exact containment
+      for (let i = start; i < end; i++) {
         const w: any = this.words[i];
         if (typeof w.start === 'number' && typeof w.end === 'number') {
           if (w.start <= selStartChar && selStartChar < w.end) {
@@ -114,9 +118,10 @@ export class ReaderController {
         }
       }
 
+      // fallback: nearest start
       if (bestCharI == null) {
         let bestDelta = Infinity;
-        for (let i = range.start; i < range.end; i++) {
+        for (let i = start; i < end; i++) {
           const w: any = this.words[i];
           if (typeof w.start === 'number') {
             const d = Math.abs(w.start - selStartChar);
@@ -129,74 +134,75 @@ export class ReaderController {
       }
     }
 
-    const x = typeof lastCtx.selClientX === 'number' ? lastCtx.selClientX : lastCtx.clientX;
-    const y = typeof lastCtx.selClientY === 'number' ? lastCtx.selClientY : lastCtx.clientY;
+    // ---------------- geometry candidate (robust to page vs client rects) ----------------
+    const xClient = typeof lastCtx.selClientX === 'number' ? lastCtx.selClientX : lastCtx.clientX;
+    const yClient = typeof lastCtx.selClientY === 'number' ? lastCtx.selClientY : lastCtx.clientY;
 
-    const normalizeRectToClient = (rect: any) => {
-      const left = rect.left ?? rect.x ?? 0;
-      const top = rect.top ?? rect.y ?? 0;
-      const width = rect.width ?? 0;
-      const height = rect.height ?? 0;
-      const right = rect.right ?? left + width;
-      const bottom = rect.bottom ?? top + height;
+    const xPage = xClient + window.scrollX;
+    const yPage = yClient + window.scrollY;
 
-      const looksPage = top > window.innerHeight * 2 || left > window.innerWidth * 2;
-
-      if (!looksPage) return { left, top, right, bottom };
-
-      return {
-        left: left - window.scrollX,
-        right: right - window.scrollX,
-        top: top - window.scrollY,
-        bottom: bottom - window.scrollY,
-      };
+    const rectBounds = (raw: any) => {
+      const left = raw.left ?? raw.x ?? 0;
+      const top = raw.top ?? raw.y ?? 0;
+      const width = raw.width ?? 0;
+      const height = raw.height ?? 0;
+      const right = raw.right ?? left + width;
+      const bottom = raw.bottom ?? top + height;
+      return { left, top, right, bottom };
     };
 
-    const dist2ToRect = (x: number, y: number, rect: { left: number; top: number; right: number; bottom: number }) => {
-      const dx = x < rect.left ? rect.left - x : x > rect.right ? x - rect.right : 0;
-      const dy = y < rect.top ? rect.top - y : y > rect.bottom ? y - rect.bottom : 0;
+    const dist2ToRect = (x: number, y: number, r: { left: number; top: number; right: number; bottom: number }) => {
+      const dx = x < r.left ? r.left - x : x > r.right ? x - r.right : 0;
+      const dy = y < r.top ? r.top - y : y > r.bottom ? y - r.bottom : 0;
       return dx * dx + dy * dy;
     };
 
-    let bestRectI = range.start;
+    let bestRectI = start;
     let bestD = Infinity;
+    let bestBasis: 'client' | 'page' | null = null;
 
-    for (let i = range.start; i < range.end; i++) {
+    for (let i = start; i < end; i++) {
       const raw = (this.words[i] as any).rect;
       if (!raw) continue;
 
-      const rect = normalizeRectToClient(raw);
-      const d = dist2ToRect(x, y, rect);
+      const r = rectBounds(raw);
+
+      const dClient = dist2ToRect(xClient, yClient, r); // if rect is client-space
+      const dPage = dist2ToRect(xPage, yPage, r); // if rect is page-space
+      const d = dClient <= dPage ? dClient : dPage;
+      const basis = dClient <= dPage ? 'client' : 'page';
 
       if (d < bestD) {
         bestD = d;
         bestRectI = i;
+        bestBasis = basis;
         if (bestD === 0) break;
       }
     }
 
-    console.log('[startFromHere]', { rcid, selStartChar, bestCharI, bestRectI, bestD, x, y });
-
-    const sample = (this.words[bestRectI] as any)?.rect;
-    console.log('[rectBasis]', {
+    console.log('[startFromHere]', {
+      rcid,
+      hasRange: !!range,
+      selStartChar,
+      bestCharI,
+      bestRectI,
+      bestD,
+      bestBasis,
+      xClient,
+      yClient,
       scrollY: window.scrollY,
-      innerH: window.innerHeight,
-      sampleTop: sample?.top,
-      sampleLeft: sample?.left,
     });
 
-    const RECT_TRUST_D2 = 200 * 200;
+    // ---------------- choose bestI ----------------
+    // With robust geometry, prefer it when it's reasonably close.
+    const RECT_TRUST_D2 = 250 * 250;
 
     let bestI: number;
+    if (Number.isFinite(bestD) && bestD <= RECT_TRUST_D2) bestI = bestRectI;
+    else if (bestCharI != null) bestI = bestCharI;
+    else bestI = bestRectI;
 
-    if (Number.isFinite(bestD) && bestD <= RECT_TRUST_D2) {
-      bestI = bestRectI;
-    } else if (bestCharI != null) {
-      bestI = bestCharI;
-    } else {
-      bestI = bestRectI;
-    }
-
+    // ---------------- deterministic start ----------------
     const wasPlaying = this.state.isPlaying();
     this.clearTimer();
     this.resumePending = false;

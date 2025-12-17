@@ -104,12 +104,20 @@ window.addEventListener(
         : (range.startContainer.parentElement as Element | null)
       : null;
 
-    const rcidElement =
+    // ✅ Prefer the block you're actually highlighting (fixes <strong> selections)
+    const blockEl =
+      (startEl?.closest?.('.rc-highlightable[data-rcid]') as HTMLElement | null) ??
+      (target?.closest?.('.rc-highlightable[data-rcid]') as HTMLElement | null);
+
+    // Fallback if we right-click outside highlightable blocks
+    const anyRcidEl =
       (startEl?.closest?.('[data-rcid]') as HTMLElement | null) ??
       (target?.closest?.('[data-rcid]') as HTMLElement | null);
 
+    const rcidElement = blockEl ?? anyRcidEl;
     const rcid = rcidElement?.getAttribute('data-rcid') ?? null;
 
+    // Selection start offset within rcidElement (block if available)
     let selStartChar: number | null = null;
     if (rcidElement && sel && range && !sel.isCollapsed) {
       try {
@@ -122,6 +130,7 @@ window.addEventListener(
       }
     }
 
+    // Selection rect center point
     let selClientX: number | null = null;
     let selClientY: number | null = null;
     if (range) {

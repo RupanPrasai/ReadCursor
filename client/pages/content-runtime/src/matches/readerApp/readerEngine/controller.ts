@@ -185,12 +185,16 @@ export class ReaderController {
       sampleLeft: sample?.left,
     });
 
-    let bestI = bestCharI ?? bestRectI;
-
     const RECT_TRUST_D2 = 200 * 200;
 
-    if (bestCharI != null) {
-      bestI = bestD <= RECT_TRUST_D2 ? bestRectI : bestCharI;
+    let bestI: number;
+
+    if (Number.isFinite(bestD) && bestD <= RECT_TRUST_D2) {
+      bestI = bestRectI;
+    } else if (bestCharI != null) {
+      bestI = bestCharI;
+    } else {
+      bestI = bestRectI;
     }
 
     const wasPlaying = this.state.isPlaying();

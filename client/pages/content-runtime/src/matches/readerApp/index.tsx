@@ -85,7 +85,8 @@ let lastCtx: {
   clientY: number;
   rcid: string | null;
   selStartChar: number | null;
-  selTokens?: string[];
+  selClientX: number | null;
+  selClientY: number | null;
 } | null = null;
 
 window.addEventListener(
@@ -110,7 +111,6 @@ window.addEventListener(
     const rcid = rcidElement?.getAttribute('data-rcid') ?? null;
 
     let selStartChar: number | null = null;
-
     if (rcidElement && sel && range && !sel.isCollapsed) {
       try {
         const pre = document.createRange();
@@ -122,21 +122,31 @@ window.addEventListener(
       }
     }
 
+    let selClientX: number | null = null;
+    let selClientY: number | null = null;
+    if (range) {
+      const r = range.getClientRects()[0] ?? range.getBoundingClientRect();
+      if (r && Number.isFinite(r.left) && Number.isFinite(r.top)) {
+        selClientX = r.left + r.width / 2;
+        selClientY = r.top + r.height / 2;
+      }
+    }
+
     lastCtx = {
       ts: Date.now(),
       rcid,
       clientX: mouse.clientX,
       clientY: mouse.clientY,
       selStartChar,
+      selClientX,
+      selClientY,
     };
   },
   { capture: true },
 );
 
-chrome.runtime.onMessage.addListener((msg, sender) => {
-  if (msg?.type !== 'START_FROM_SELECTION') {
-    return;
-  }
+chrome.runtime.onMessage.addListener(msg => {
+  if (msg?.type !== 'START_FROM_SELECTION') return;
 
   console.log('[ReadCursor] START_HERE using lastCtx:', lastCtx);
 

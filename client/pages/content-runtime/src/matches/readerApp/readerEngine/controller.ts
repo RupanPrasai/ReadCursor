@@ -90,7 +90,8 @@ export class ReaderController {
     clientX: number;
     clientY: number;
     selStartChar?: number | null;
-    selTokens?: string[];
+    selClientX?: number | null;
+    selClientY?: number | null;
   }) {
     const rcid = lastCtx.rcid == null ? null : String(lastCtx.rcid);
     if (!rcid) return;
@@ -98,73 +99,108 @@ export class ReaderController {
     const range = this.rangeByRcid.get(rcid);
     if (!range) return;
 
-    let bestI: number | null = null;
-
     const selStartChar = lastCtx.selStartChar;
+
+    let bestCharI: number | null = null;
+
     if (typeof selStartChar === 'number' && Number.isFinite(selStartChar)) {
       for (let i = range.start; i < range.end; i++) {
-        const w = this.words[i] as any;
-        if (w.start <= selStartChar && selStartChar < w.end) {
-          bestI = i;
-          break;
+        const w: any = this.words[i];
+        if (typeof w.start === 'number' && typeof w.end === 'number') {
+          if (w.start <= selStartChar && selStartChar < w.end) {
+            bestCharI = i;
+            break;
+          }
         }
       }
 
-      if (bestI == null) {
+      if (bestCharI == null) {
         let bestDelta = Infinity;
         for (let i = range.start; i < range.end; i++) {
-          const w = this.words[i] as any;
-          const d = Math.abs(w.start - selStartChar);
-          if (d < bestDelta) {
-            bestDelta = d;
-            bestI = i;
+          const w: any = this.words[i];
+          if (typeof w.start === 'number') {
+            const d = Math.abs(w.start - selStartChar);
+            if (d < bestDelta) {
+              bestDelta = d;
+              bestCharI = i;
+            }
           }
         }
       }
     }
 
-    if (bestI == null) {
-      const { clientX, clientY } = lastCtx;
+    const x = typeof lastCtx.selClientX === 'number' ? lastCtx.selClientX : lastCtx.clientX;
+    const y = typeof lastCtx.selClientY === 'number' ? lastCtx.selClientY : lastCtx.clientY;
 
-      const dist2ToRect = (x: number, y: number, rect: any) => {
-        const left = rect.left,
-          top = rect.top;
-        const right = rect.right ?? rect.left + rect.width;
-        const bottom = rect.bottom ?? rect.top + rect.height;
-        const dx = x < left ? left - x : x > right ? x - right : 0;
-        const dy = y < top ? top - y : y > bottom ? y - bottom : 0;
-        return dx * dx + dy * dy;
+    const normalizeRectToClient = (rect: any) => {
+      const left = rect.left ?? rect.x ?? 0;
+      const top = rect.top ?? rect.y ?? 0;
+      const width = rect.width ?? 0;
+      const height = rect.height ?? 0;
+      const right = rect.right ?? left + width;
+      const bottom = rect.bottom ?? top + height;
+
+      const looksPage = top > window.innerHeight * 2 || left > window.innerWidth * 2;
+
+      if (!looksPage) return { left, top, right, bottom };
+
+      return {
+        left: left - window.scrollX,
+        right: right - window.scrollX,
+        top: top - window.scrollY,
+        bottom: bottom - window.scrollY,
       };
+    };
 
-      let bestD = Infinity;
-      let fallbackI = range.start;
+    const dist2ToRect = (x: number, y: number, rect: { left: number; top: number; right: number; bottom: number }) => {
+      const dx = x < rect.left ? rect.left - x : x > rect.right ? x - rect.right : 0;
+      const dy = y < rect.top ? rect.top - y : y > rect.bottom ? y - rect.bottom : 0;
+      return dx * dx + dy * dy;
+    };
 
-      for (let i = range.start; i < range.end; i++) {
-        const rect = (this.words[i] as any).rect;
-        if (!rect) continue;
-        const d = dist2ToRect(clientX, clientY, rect);
-        if (d < bestD) {
-          bestD = d;
-          fallbackI = i;
-          if (bestD === 0) break;
-        }
+    let bestRectI = range.start;
+    let bestD = Infinity;
+
+    for (let i = range.start; i < range.end; i++) {
+      const raw = (this.words[i] as any).rect;
+      if (!raw) continue;
+
+      const rect = normalizeRectToClient(raw);
+      const d = dist2ToRect(x, y, rect);
+
+      if (d < bestD) {
+        bestD = d;
+        bestRectI = i;
+        if (bestD === 0) break;
       }
+    }
 
-      bestI = fallbackI;
+    console.log('[startFromHere]', { rcid, selStartChar, bestCharI, bestRectI, bestD, x, y });
+
+    const sample = (this.words[bestRectI] as any)?.rect;
+    console.log('[rectBasis]', {
+      scrollY: window.scrollY,
+      innerH: window.innerHeight,
+      sampleTop: sample?.top,
+      sampleLeft: sample?.left,
+    });
+
+    let bestI = bestCharI ?? bestRectI;
+
+    const RECT_TRUST_D2 = 200 * 200;
+
+    if (bestCharI != null) {
+      bestI = bestD <= RECT_TRUST_D2 ? bestRectI : bestCharI;
     }
 
     const wasPlaying = this.state.isPlaying();
-
     this.clearTimer();
     this.resumePending = false;
     this.highlighter.clearAll();
-    this.index = bestI!;
+    this.index = bestI;
 
-    if (wasPlaying) {
-      this.scheduleNext();
-    } else {
-      this.state.play();
-    }
+    if (wasPlaying) this.scheduleNext();
+    else this.state.play();
   }
 
   private startPlayback() {

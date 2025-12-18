@@ -50,24 +50,46 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
       {/* Drag Bar Section */}
       <div onMouseDown={startDrag} className="drag-bar">
         <span className="drag-text">Drag Here</span>
-        <button onClick={onDestroy} className="close-button" aria-label="Close extension">
+        <button onClick={onDestroy} className="close-button" aria-label="Close extension" type="button">
           &times;
         </button>
       </div>
+
       <div className="p-4">
         <h2 className="text-lg font-semibold">Reader Panel</h2>
         <p className="text-sm text-gray-600">Floating Panel</p>
 
         {/* CONTROLS */}
         <div className="flex gap-2">
-          <button className="rounded bg-green-600 px-3 py-1 text-white" onClick={() => controller.play()}>
+          <button
+            className="rounded bg-slate-600 px-3 py-1 text-white"
+            onClick={() => controller.prevBlock()}
+            type="button"
+            aria-label="Previous block">
+            ⏮ Prev
+          </button>
+
+          <button className="rounded bg-green-600 px-3 py-1 text-white" onClick={() => controller.play()} type="button">
             Play
           </button>
-          <button className="rounded bg-yellow-500 px-3 py-1 text-white" onClick={() => controller.pause()}>
+
+          <button
+            className="rounded bg-yellow-500 px-3 py-1 text-white"
+            onClick={() => controller.pause()}
+            type="button">
             Pause
           </button>
-          <button className="rounded bg-red-600 px-3 py-1 text-white" onClick={() => controller.stop()}>
+
+          <button className="rounded bg-red-600 px-3 py-1 text-white" onClick={() => controller.stop()} type="button">
             Stop
+          </button>
+
+          <button
+            className="rounded bg-slate-600 px-3 py-1 text-white"
+            onClick={() => controller.nextBlock()}
+            type="button"
+            aria-label="Next block">
+            Next ⏭
           </button>
         </div>
       </div>

@@ -28,6 +28,8 @@ export class ReaderController {
     return Math.round(60000 / this.wpm);
   }
 
+  private orderedRcids: string[] = [];
+
   private autoScroll: AutoScroll;
   private highlighter: Highlighter;
 
@@ -67,6 +69,7 @@ export class ReaderController {
       }
     }
 
+    this.rebuildOrderedRcids();
     this.state.setReady();
   }
 
@@ -85,6 +88,81 @@ export class ReaderController {
     this.state.setReady();
   }
 
+  private getAnchorWordIndex() {
+    // While playing/paused, index points to "next word"; the highlighted word is index-1.
+    const i = this.state.isPlaying() || this.state.isPaused() ? this.index - 1 : this.index;
+    return Math.max(0, Math.min(this.words.length - 1, i));
+  }
+
+  private rebuildOrderedRcids() {
+    this.orderedRcids = Array.from(this.rangeByRcid.entries())
+      .sort((a, b) => a[1].start - b[1].start)
+      .map(([rcid]) => rcid);
+  }
+
+  private getCurrentRcid(): string | null {
+    if (!this.words.length) return null;
+    const i = this.getAnchorWordIndex();
+    const rcid = this.words[i]?.rcid;
+    return rcid == null ? null : String(rcid);
+  }
+
+  private jumpToIndex(targetIndex: number) {
+    if (!this.words.length) return;
+    const i = Math.max(0, Math.min(this.words.length - 1, targetIndex));
+
+    const wasPlaying = this.state.isPlaying();
+
+    this.clearTimer();
+    this.resumePending = false;
+    this.highlighter.clearAll();
+    this.index = i;
+
+    if (wasPlaying)
+      this.scheduleNext(); // highlights + continues
+    else this.seek(i); // highlights only, no auto-advance
+  }
+
+  prevBlock() {
+    const rcid = this.getCurrentRcid();
+    if (!rcid) return;
+
+    const range = this.rangeByRcid.get(rcid);
+    if (!range) return;
+
+    const anchor = this.getAnchorWordIndex();
+
+    // 1st press: restart current block if not at its first word
+    if (anchor > range.start) {
+      this.jumpToIndex(range.start);
+      return;
+    }
+
+    // 2nd press: go to previous block
+    const pos = this.orderedRcids.indexOf(rcid);
+    if (pos <= 0) return;
+
+    const prevRcid = this.orderedRcids[pos - 1];
+    const prevRange = this.rangeByRcid.get(prevRcid);
+    if (!prevRange) return;
+
+    this.jumpToIndex(prevRange.start);
+  }
+
+  nextBlock() {
+    const rcid = this.getCurrentRcid();
+    if (!rcid) return;
+
+    const pos = this.orderedRcids.indexOf(rcid);
+    if (pos < 0 || pos >= this.orderedRcids.length - 1) return;
+
+    const nextRcid = this.orderedRcids[pos + 1];
+    const nextRange = this.rangeByRcid.get(nextRcid);
+    if (!nextRange) return;
+
+    this.jumpToIndex(nextRange.start);
+  }
+
   startFromHere(lastCtx: {
     rcid?: string | number | null;
     clientX: number;
@@ -92,21 +170,51 @@ export class ReaderController {
     selStartChar?: number | null;
     selClientX?: number | null;
     selClientY?: number | null;
+
+    // NEW: from your contextmenu listener
+    pageX?: number | null;
+    pageY?: number | null;
   }) {
-    const rcid = lastCtx.rcid == null ? null : String(lastCtx.rcid);
+    let rcid = lastCtx.rcid == null ? null : String(lastCtx.rcid);
     if (!rcid) return;
 
-    // Range fallback: if rcid not present in rangeByRcid, search all words
+    // If rcid isn't a highlightable block, try to "bubble" to nearest rc-highlightable ancestor
+    // (fixes selections inside <strong data-rcid=...> when your ranges are keyed by the parent <p> rcid)
+    if (!this.rangeByRcid.get(rcid)) {
+      const el = document.querySelector(`[data-rcid="${CSS.escape(rcid)}"]`) as HTMLElement | null;
+      const block = el?.closest?.('.rc-highlightable[data-rcid]') as HTMLElement | null;
+      const blockRcid = block?.getAttribute('data-rcid');
+      if (blockRcid && this.rangeByRcid.get(blockRcid)) rcid = blockRcid;
+    }
+
     const range = this.rangeByRcid.get(rcid);
     const start = range?.start ?? 0;
     const end = range?.end ?? this.words.length;
+    if (start >= end) return;
 
     const selStartChar = lastCtx.selStartChar;
 
-    // ---------------- char-based candidate (keep as fallback) ----------------
+    // ---------- decide if char-based mapping is even valid ----------
+    // Your wordGeometry stores start/end per TEXT NODE (resets), but selStartChar is per ELEMENT.
+    // If starts are not monotonic, char-mapping will be wrong (this is exactly the <strong> displacement).
+    let charOffsetsLookGlobal = true;
+    {
+      let prev = -Infinity;
+      for (let i = start; i < end; i++) {
+        const w: any = this.words[i];
+        if (typeof w.start !== 'number') continue;
+        if (w.start < prev) {
+          charOffsetsLookGlobal = false;
+          break;
+        }
+        prev = w.start;
+      }
+    }
+
+    // ---------------- char-based candidate (ONLY if offsets look global) ----------------
     let bestCharI: number | null = null;
 
-    if (typeof selStartChar === 'number' && Number.isFinite(selStartChar)) {
+    if (charOffsetsLookGlobal && typeof selStartChar === 'number' && Number.isFinite(selStartChar)) {
       // exact containment
       for (let i = start; i < end; i++) {
         const w: any = this.words[i];
@@ -134,12 +242,12 @@ export class ReaderController {
       }
     }
 
-    // ---------------- geometry candidate (robust to page vs client rects) ----------------
+    // ---------------- geometry candidate (uses both client & page) ----------------
     const xClient = typeof lastCtx.selClientX === 'number' ? lastCtx.selClientX : lastCtx.clientX;
     const yClient = typeof lastCtx.selClientY === 'number' ? lastCtx.selClientY : lastCtx.clientY;
 
-    const xPage = xClient + window.scrollX;
-    const yPage = yClient + window.scrollY;
+    const xPage = typeof lastCtx.pageX === 'number' ? lastCtx.pageX : xClient + window.scrollX;
+    const yPage = typeof lastCtx.pageY === 'number' ? lastCtx.pageY : yClient + window.scrollY;
 
     const rectBounds = (raw: any) => {
       const left = raw.left ?? raw.x ?? 0;
@@ -167,8 +275,11 @@ export class ReaderController {
 
       const r = rectBounds(raw);
 
-      const dClient = dist2ToRect(xClient, yClient, r); // if rect is client-space
-      const dPage = dist2ToRect(xPage, yPage, r); // if rect is page-space
+      // raw rects in your wordGeometry are often PAGE-space (because you store toAbsoluteRect),
+      // but we handle both defensively.
+      const dClient = dist2ToRect(xClient, yClient, r);
+      const dPage = dist2ToRect(xPage, yPage, r);
+
       const d = dClient <= dPage ? dClient : dPage;
       const basis = dClient <= dPage ? 'client' : 'page';
 
@@ -180,21 +291,7 @@ export class ReaderController {
       }
     }
 
-    console.log('[startFromHere]', {
-      rcid,
-      hasRange: !!range,
-      selStartChar,
-      bestCharI,
-      bestRectI,
-      bestD,
-      bestBasis,
-      xClient,
-      yClient,
-      scrollY: window.scrollY,
-    });
-
     // ---------------- choose bestI ----------------
-    // With robust geometry, prefer it when it's reasonably close.
     const RECT_TRUST_D2 = 250 * 250;
 
     let bestI: number;

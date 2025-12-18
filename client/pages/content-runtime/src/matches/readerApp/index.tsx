@@ -87,6 +87,8 @@ let lastCtx: {
   selStartChar: number | null;
   selClientX: number | null;
   selClientY: number | null;
+  pageX: number;
+  pageY: number;
 } | null = null;
 
 window.addEventListener(
@@ -141,6 +143,12 @@ window.addEventListener(
       }
     }
 
+    const xClient = typeof selClientX === 'number' ? selClientX : mouse.clientX;
+    const yClient = typeof selClientY === 'number' ? selClientY : mouse.clientY;
+
+    const pageX = xClient + window.scrollX;
+    const pageY = yClient + window.scrollY;
+
     lastCtx = {
       ts: Date.now(),
       rcid,
@@ -149,6 +157,8 @@ window.addEventListener(
       selStartChar,
       selClientX,
       selClientY,
+      pageX,
+      pageY,
     };
   },
   { capture: true },
@@ -157,7 +167,6 @@ window.addEventListener(
 chrome.runtime.onMessage.addListener(msg => {
   if (msg?.type !== 'START_FROM_SELECTION') return;
 
-  console.log('[ReadCursor] START_HERE using lastCtx:', lastCtx);
 
   window.dispatchEvent(
     new CustomEvent('readcursor:startHere', {

@@ -30,6 +30,8 @@ export class ReaderController {
 
   private orderedRcids: string[] = [];
 
+  private lastHighlightedIndex = 0;
+
   private autoScroll: AutoScroll;
   private highlighter: Highlighter;
 
@@ -55,6 +57,7 @@ export class ReaderController {
   load(words: WordGeometry[]) {
     this.words = words;
     this.index = 0;
+    this.lastHighlightedIndex = 0;
     this.resumePending = false;
     this.clearTimer();
 
@@ -90,7 +93,11 @@ export class ReaderController {
 
   private getAnchorWordIndex() {
     // While playing/paused, index points to "next word"; the highlighted word is index-1.
-    const i = this.state.isPlaying() || this.state.isPaused() ? this.index - 1 : this.index;
+    //
+    if (!this.words.length) return 0;
+
+    const i = this.state.isPlaying() || this.state.isPaused() ? this.lastHighlightedIndex : this.index;
+
     return Math.max(0, Math.min(this.words.length - 1, i));
   }
 
@@ -329,6 +336,7 @@ export class ReaderController {
   private stopPlayback() {
     this.pausePlayback();
     this.index = 0;
+    this.lastHighlightedIndex = 0;
     this.highlighter.clearAll();
   }
 
@@ -368,6 +376,8 @@ export class ReaderController {
     this.highlighter.highlightBlock(currentWord);
     this.highlighter.highlightWord(currentWord);
 
+    this.lastHighlightedIndex = this.index;
+
     this.index++;
 
     this.timer = window.setTimeout(() => {
@@ -381,6 +391,7 @@ export class ReaderController {
     }
 
     this.index = index;
+    this.lastHighlightedIndex = index;
 
     const currentWord = this.words[this.index];
     this.highlighter.highlightBlock(currentWord);

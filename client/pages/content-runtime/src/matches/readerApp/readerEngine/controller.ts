@@ -11,6 +11,13 @@ function clampInt(raw: number, min: number, max: number) {
 const MIN_WPM = 50;
 const MAX_WPM = 450;
 
+export type ReaderAnchorSnapshot = {
+  rcid: string | null;
+  offsetInBlock: number; // 0 = first word of block
+  absoluteIndex: number; // fallback
+  state: ReturnType<ReaderStateMachine['getState']>;
+};
+
 export class ReaderController {
   private words: WordGeometry[] = [];
   private index = 0;
@@ -54,14 +61,14 @@ export class ReaderController {
     }
   }
 
-  load(words: WordGeometry[]) {
-    this.words = words;
-    this.index = 0;
-    this.lastHighlightedIndex = 0;
-    this.resumePending = false;
-    this.clearTimer();
+  private clampWordIndex(i: number) {
+    if (!this.words.length) return 0;
+    return Math.max(0, Math.min(this.words.length - 1, i));
+  }
 
+  private rebuildRangesAndOrder(words: WordGeometry[]) {
     this.rangeByRcid.clear();
+
     for (let i = 0; i < words.length; i++) {
       const rcid = String(words[i].rcid);
       const existing = this.rangeByRcid.get(rcid);
@@ -72,8 +79,109 @@ export class ReaderController {
       }
     }
 
-    this.rebuildOrderedRcids();
+    this.orderedRcids = Array.from(this.rangeByRcid.entries())
+      .sort((a, b) => a[1].start - b[1].start)
+      .map(([rcid]) => rcid);
+  }
+
+  load(words: WordGeometry[]) {
+    this.words = words;
+    this.index = 0;
+    this.lastHighlightedIndex = 0;
+    this.resumePending = false;
+    this.clearTimer();
+
+    this.rebuildRangesAndOrder(words);
     this.state.setReady();
+  }
+
+  /**
+   * Snapshot current "place" in a way that's stable across geometry rebuilds:
+   * - primary: (rcid, offset within that block)
+   * - fallback: absolute index
+   */
+  public snapshotAnchor(): ReaderAnchorSnapshot {
+    const absoluteIndex = this.getAnchorWordIndex();
+    const rcid = this.getCurrentRcid();
+
+    let offsetInBlock = 0;
+    if (rcid) {
+      const range = this.rangeByRcid.get(rcid);
+      if (range) offsetInBlock = absoluteIndex - range.start;
+    }
+
+    return {
+      rcid,
+      offsetInBlock: Math.max(0, offsetInBlock),
+      absoluteIndex,
+      state: this.state.getState(),
+    };
+  }
+
+  private resolveIndexFromSnapshot(snapshot: ReaderAnchorSnapshot) {
+    if (!this.words.length) return 0;
+
+    const rcid = snapshot.rcid;
+    if (rcid) {
+      const range = this.rangeByRcid.get(rcid);
+      if (range) {
+        const len = Math.max(1, range.end - range.start);
+        const off = Math.max(0, Math.min(len - 1, snapshot.offsetInBlock));
+        return this.clampWordIndex(range.start + off);
+      }
+    }
+
+    // fallback: absolute index
+    return this.clampWordIndex(snapshot.absoluteIndex);
+  }
+
+  /**
+   * Replaces geometry while preserving:
+   * - reading position (rcid + offset)
+   * - PLAYING vs PAUSED vs READY semantics
+   *
+   * This is what App will call after recomputing word geometry on resize/zoom.
+   */
+  public reloadGeometry(words: WordGeometry[]) {
+    if (!words?.length) return;
+
+    const snap = this.snapshotAnchor();
+
+    const wasPlaying = this.state.isPlaying();
+    const wasPaused = this.state.isPaused();
+
+    // If we were ENDED/IDLE, allow play again after reload.
+    this.state.setReady();
+
+    // stop timing + clear visuals while swapping the backing array
+    this.clearTimer();
+    this.resumePending = false;
+    this.highlighter.clearAll();
+
+    // swap & rebuild indices
+    this.words = words;
+    this.rebuildRangesAndOrder(words);
+
+    const highlightIndex = this.resolveIndexFromSnapshot(snap);
+
+    if (wasPlaying) {
+      // For PLAYING, we want scheduleNext() to highlight highlightIndex and then
+      // advance index to next word (maintains invariants).
+      this.index = highlightIndex;
+      this.scheduleNext();
+      return;
+    }
+
+    if (wasPaused) {
+      // For PAUSED, we want:
+      // - highlight the same word immediately
+      // - keep index pointing to NEXT word (so resumePending works correctly)
+      this.seekPaused(highlightIndex);
+      return;
+    }
+
+    // READY (or other non-playing state): just show the highlight at the same place.
+    this.seek(highlightIndex);
   }
 
   play() {
@@ -92,19 +200,11 @@ export class ReaderController {
   }
 
   private getAnchorWordIndex() {
-    // While playing/paused, index points to "next word"; the highlighted word is index-1.
-    //
+    // While playing/paused, index points to "next word"; the highlighted word is tracked separately.
     if (!this.words.length) return 0;
 
     const i = this.state.isPlaying() || this.state.isPaused() ? this.lastHighlightedIndex : this.index;
-
-    return Math.max(0, Math.min(this.words.length - 1, i));
-  }
-
-  private rebuildOrderedRcids() {
-    this.orderedRcids = Array.from(this.rangeByRcid.entries())
-      .sort((a, b) => a[1].start - b[1].start)
-      .map(([rcid]) => rcid);
+    return this.clampWordIndex(i);
   }
 
   private getCurrentRcid(): string | null {
@@ -116,7 +216,7 @@ export class ReaderController {
 
   private jumpToIndex(targetIndex: number) {
     if (!this.words.length) return;
-    const i = Math.max(0, Math.min(this.words.length - 1, targetIndex));
+    const i = this.clampWordIndex(targetIndex);
 
     const wasPlaying = this.state.isPlaying();
 
@@ -177,16 +277,12 @@ export class ReaderController {
     selStartChar?: number | null;
     selClientX?: number | null;
     selClientY?: number | null;
-
-    // NEW: from your contextmenu listener
     pageX?: number | null;
     pageY?: number | null;
   }) {
     let rcid = lastCtx.rcid == null ? null : String(lastCtx.rcid);
     if (!rcid) return;
 
-    // If rcid isn't a highlightable block, try to "bubble" to nearest rc-highlightable ancestor
-    // (fixes selections inside <strong data-rcid=...> when your ranges are keyed by the parent <p> rcid)
     if (!this.rangeByRcid.get(rcid)) {
       const el = document.querySelector(`[data-rcid="${CSS.escape(rcid)}"]`) as HTMLElement | null;
       const block = el?.closest?.('.rc-highlightable[data-rcid]') as HTMLElement | null;
@@ -201,9 +297,6 @@ export class ReaderController {
 
     const selStartChar = lastCtx.selStartChar;
 
-    // ---------- decide if char-based mapping is even valid ----------
-    // Your wordGeometry stores start/end per TEXT NODE (resets), but selStartChar is per ELEMENT.
-    // If starts are not monotonic, char-mapping will be wrong (this is exactly the <strong> displacement).
     let charOffsetsLookGlobal = true;
     {
       let prev = -Infinity;
@@ -218,11 +311,9 @@ export class ReaderController {
       }
     }
 
-    // ---------------- char-based candidate (ONLY if offsets look global) ----------------
     let bestCharI: number | null = null;
 
     if (charOffsetsLookGlobal && typeof selStartChar === 'number' && Number.isFinite(selStartChar)) {
-      // exact containment
       for (let i = start; i < end; i++) {
         const w: any = this.words[i];
         if (typeof w.start === 'number' && typeof w.end === 'number') {
@@ -233,7 +324,6 @@ export class ReaderController {
         }
       }
 
-      // fallback: nearest start
       if (bestCharI == null) {
         let bestDelta = Infinity;
         for (let i = start; i < end; i++) {
@@ -249,7 +339,6 @@ export class ReaderController {
       }
     }
 
-    // ---------------- geometry candidate (uses both client & page) ----------------
     const xClient = typeof lastCtx.selClientX === 'number' ? lastCtx.selClientX : lastCtx.clientX;
     const yClient = typeof lastCtx.selClientY === 'number' ? lastCtx.selClientY : lastCtx.clientY;
 
@@ -274,7 +363,6 @@ export class ReaderController {
 
     let bestRectI = start;
     let bestD = Infinity;
-    let bestBasis: 'client' | 'page' | null = null;
 
     for (let i = start; i < end; i++) {
       const raw = (this.words[i] as any).rect;
@@ -282,23 +370,18 @@ export class ReaderController {
 
       const r = rectBounds(raw);
 
-      // raw rects in your wordGeometry are often PAGE-space (because you store toAbsoluteRect),
-      // but we handle both defensively.
       const dClient = dist2ToRect(xClient, yClient, r);
       const dPage = dist2ToRect(xPage, yPage, r);
 
       const d = dClient <= dPage ? dClient : dPage;
-      const basis = dClient <= dPage ? 'client' : 'page';
 
       if (d < bestD) {
         bestD = d;
         bestRectI = i;
-        bestBasis = basis;
         if (bestD === 0) break;
       }
     }
 
-    // ---------------- choose bestI ----------------
     const RECT_TRUST_D2 = 250 * 250;
 
     let bestI: number;
@@ -306,7 +389,6 @@ export class ReaderController {
     else if (bestCharI != null) bestI = bestCharI;
     else bestI = bestRectI;
 
-    // ---------------- deterministic start ----------------
     const wasPlaying = this.state.isPlaying();
     this.clearTimer();
     this.resumePending = false;
@@ -345,9 +427,7 @@ export class ReaderController {
   }
 
   private scheduleTickOnly() {
-    if (!this.state.isPlaying()) {
-      return;
-    }
+    if (!this.state.isPlaying()) return;
 
     if (this.index >= this.words.length) {
       this.stop();
@@ -362,9 +442,7 @@ export class ReaderController {
   private scheduleNext() {
     this.clearTimer();
 
-    if (!this.state.isPlaying()) {
-      return;
-    }
+    if (!this.state.isPlaying()) return;
 
     if (this.index >= this.words.length) {
       this.stop();
@@ -385,10 +463,11 @@ export class ReaderController {
     }, this.msPerWord);
   }
 
+  /**
+   * Seek + highlight only (no timer). Leaves index pointing *at* that word.
+   */
   seek(index: number) {
-    if (index < 0 || index >= this.words.length) {
-      return;
-    }
+    if (index < 0 || index >= this.words.length) return;
 
     this.index = index;
     this.lastHighlightedIndex = index;
@@ -398,11 +477,22 @@ export class ReaderController {
     this.highlighter.highlightWord(currentWord);
   }
 
+  /**
+   * PAUSED invariant: keep highlight at i, but index should point to NEXT word.
+   * This preserves your "resumePending" semantics (resume continues forward).
+   */
+  private seekPaused(highlightIndex: number) {
+    const i = this.clampWordIndex(highlightIndex);
+    this.seek(i);
+
+    // index should point to the next word to play
+    const next = i + 1;
+    this.index = next <= this.words.length ? next : this.words.length;
+  }
+
   setWPM(raw: number) {
     const wpm = clampInt(raw, MIN_WPM, MAX_WPM);
-    if (wpm === this.wpm) {
-      return;
-    }
+    if (wpm === this.wpm) return;
 
     this.wpm = wpm;
 

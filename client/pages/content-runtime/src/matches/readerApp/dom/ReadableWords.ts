@@ -1,9 +1,8 @@
 export function* walkTextNodes(root: Element): Generator<Text> {
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-    acceptNode(node) {
-      return node.nodeValue && /\S/.test(node.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-    },
-  });
+  // IMPORTANT: include *all* text nodes (including whitespace-only),
+  // because selStartChar is computed via Range.toString().length over the whole element.
+  // If we skip whitespace-only nodes here, global offsets will drift.
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
 
   let current: Node | null;
   while ((current = walker.nextNode())) {
@@ -51,8 +50,8 @@ function rectToPlain(r: DOMRect | DOMRectReadOnly) {
     height,
     x: (r as any).x ?? left,
     y: (r as any).y ?? top,
-    right: r.right ?? left + width,
-    bottom: r.bottom ?? top + height,
+    right: (r as any).right ?? left + width,
+    bottom: (r as any).bottom ?? top + height,
   };
 }
 
@@ -60,8 +59,7 @@ export function extractWordsFromNode(element: Element) {
   const rcid = Number(element.getAttribute('data-rcid'));
   const words: any[] = [];
 
-  // Use CLIENT-space rects (BoundingClientRect). This aligns with CSS positioning
-  // and avoids scroll/absolute-space drift under zoom/resize/visualViewport changes.
+  // CLIENT-space rects
   const blockRectRaw = element.getBoundingClientRect();
   const blockRect = rectToPlain(blockRectRaw);
 
@@ -72,21 +70,26 @@ export function extractWordsFromNode(element: Element) {
     height: blockRect.height,
   };
 
+  // Global char offset across *all* descendant text nodes of this element.
+  // This is what makes selStartChar mapping stable under zoom/resize/reflow.
+  let globalTextOffset = 0;
+
   for (const textNode of walkTextNodes(element)) {
-    const text = textNode.nodeValue!;
+    const text = textNode.nodeValue ?? '';
+
+    // Compute word boundaries within THIS text node (node-local)
     const boundaries = getWordBoundaries(text);
 
-    for (const [start, end] of boundaries) {
+    for (const [startLocal, endLocal] of boundaries) {
       const range = document.createRange();
-      range.setStart(textNode, start);
-      range.setEnd(textNode, end);
+      range.setStart(textNode, startLocal);
+      range.setEnd(textNode, endLocal);
 
       const wordRectRaw = range.getBoundingClientRect();
       if (wordRectRaw.width < 1 || wordRectRaw.height < 1) continue;
 
       const rect = rectToPlain(wordRectRaw);
 
-      // localRect is relative to the block element's client rect.
       const localRect = {
         left: rect.left - blockRect.left,
         top: rect.top - blockRect.top,
@@ -94,25 +97,31 @@ export function extractWordsFromNode(element: Element) {
         height: rect.height,
       };
 
+      // Convert node-local offsets -> element-global offsets
+      const start = globalTextOffset + startLocal;
+      const end = globalTextOffset + endLocal;
+
       words.push({
         rcid,
-        text: text.slice(start, end),
+        text: text.slice(startLocal, endLocal),
 
-        // client-space rects
         blockRect,
         rect,
 
-        // local-space rects (used by Highlighter)
         blockLocalRect,
         localRect,
 
-        // text-node offsets (per text node)
+        // NOW: element-global offsets (not per text node)
         start,
         end,
 
         node: element,
       });
     }
+
+    // Always advance by full node length (including whitespace),
+    // so offsets match Range.toString() length semantics.
+    globalTextOffset += text.length;
   }
 
   return words;

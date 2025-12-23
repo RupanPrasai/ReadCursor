@@ -57,13 +57,19 @@ const onContextMenu = (event: Event) => {
   const rcid = rcidElement?.getAttribute('data-rcid') ?? null;
 
   // Selection start offset within rcidElement (block if available)
+  // Selection start offset within rcidElement (block if available)
   let selStartChar: number | null = null;
   if (rcidElement && sel && range && !sel.isCollapsed) {
     try {
       const pre = document.createRange();
       pre.selectNodeContents(rcidElement);
       pre.setEnd(range.startContainer, range.startOffset);
-      selStartChar = pre.toString().length;
+
+      // IMPORTANT:
+      // Use DOM textContent length (raw text nodes), NOT Range.toString(),
+      // so it matches ReadableWords.ts globalTextOffset semantics.
+      const frag = pre.cloneContents();
+      selStartChar = frag.textContent?.length ?? 0;
     } catch {
       selStartChar = null;
     }
@@ -200,4 +206,3 @@ if (existingSingleton?.dispose) {
 }
 
 initializeReaderPanel();
-

@@ -270,6 +270,13 @@ export class ReaderController {
     this.jumpToIndex(nextRange.start);
   }
 
+  /**
+   * Start from selection context.
+   * Rule:
+   *  - If a real selection exists (selStartChar finite) and word start/end offsets are element-global:
+   *      ALWAYS use char-offset mapping (layout-proof under zoom/resize reflow).
+   *  - Only fallback to rect-proximity when selection mapping is not available.
+   */
   startFromHere(lastCtx: {
     rcid?: string | number | null;
     clientX: number;
@@ -283,6 +290,7 @@ export class ReaderController {
     let rcid = lastCtx.rcid == null ? null : String(lastCtx.rcid);
     if (!rcid) return;
 
+    // If caller passed a nested rcid, normalize to closest highlightable block rcid.
     if (!this.rangeByRcid.get(rcid)) {
       const el = document.querySelector(`[data-rcid="${CSS.escape(rcid)}"]`) as HTMLElement | null;
       const block = el?.closest?.('.rc-highlightable[data-rcid]') as HTMLElement | null;
@@ -296,7 +304,9 @@ export class ReaderController {
     if (start >= end) return;
 
     const selStartChar = lastCtx.selStartChar;
+    const hasSel = typeof selStartChar === 'number' && Number.isFinite(selStartChar);
 
+    // Sanity: offsets within this block should be non-decreasing if they're element-global.
     let charOffsetsLookGlobal = true;
     {
       let prev = -Infinity;
@@ -313,23 +323,25 @@ export class ReaderController {
 
     let bestCharI: number | null = null;
 
-    if (charOffsetsLookGlobal && typeof selStartChar === 'number' && Number.isFinite(selStartChar)) {
+    if (hasSel && charOffsetsLookGlobal) {
+      // Prefer containment by [start, end)
       for (let i = start; i < end; i++) {
         const w: any = this.words[i];
         if (typeof w.start === 'number' && typeof w.end === 'number') {
-          if (w.start <= selStartChar && selStartChar < w.end) {
+          if (w.start <= (selStartChar as number) && (selStartChar as number) < w.end) {
             bestCharI = i;
             break;
           }
         }
       }
 
+      // Fallback: closest start
       if (bestCharI == null) {
         let bestDelta = Infinity;
         for (let i = start; i < end; i++) {
           const w: any = this.words[i];
           if (typeof w.start === 'number') {
-            const d = Math.abs(w.start - selStartChar);
+            const d = Math.abs(w.start - (selStartChar as number));
             if (d < bestDelta) {
               bestDelta = d;
               bestCharI = i;
@@ -339,11 +351,22 @@ export class ReaderController {
       }
     }
 
+    // ✅ HARD RULE: if we have a usable selection mapping, NEVER choose by rect proximity.
+    if (bestCharI != null) {
+      const wasPlaying = this.state.isPlaying();
+      this.clearTimer();
+      this.resumePending = false;
+      this.highlighter.clearAll();
+      this.index = bestCharI;
+
+      if (wasPlaying) this.scheduleNext();
+      else this.state.play();
+      return;
+    }
+
+    // Rect fallback only when selection mapping isn't available.
     const xClient = typeof lastCtx.selClientX === 'number' ? lastCtx.selClientX : lastCtx.clientX;
     const yClient = typeof lastCtx.selClientY === 'number' ? lastCtx.selClientY : lastCtx.clientY;
-
-    const xPage = typeof lastCtx.pageX === 'number' ? lastCtx.pageX : xClient + window.scrollX;
-    const yPage = typeof lastCtx.pageY === 'number' ? lastCtx.pageY : yClient + window.scrollY;
 
     const rectBounds = (raw: any) => {
       const left = raw.left ?? raw.x ?? 0;
@@ -369,11 +392,7 @@ export class ReaderController {
       if (!raw) continue;
 
       const r = rectBounds(raw);
-
-      const dClient = dist2ToRect(xClient, yClient, r);
-      const dPage = dist2ToRect(xPage, yPage, r);
-
-      const d = dClient <= dPage ? dClient : dPage;
+      const d = dist2ToRect(xClient, yClient, r);
 
       if (d < bestD) {
         bestD = d;
@@ -382,18 +401,11 @@ export class ReaderController {
       }
     }
 
-    const RECT_TRUST_D2 = 250 * 250;
-
-    let bestI: number;
-    if (Number.isFinite(bestD) && bestD <= RECT_TRUST_D2) bestI = bestRectI;
-    else if (bestCharI != null) bestI = bestCharI;
-    else bestI = bestRectI;
-
     const wasPlaying = this.state.isPlaying();
     this.clearTimer();
     this.resumePending = false;
     this.highlighter.clearAll();
-    this.index = bestI;
+    this.index = bestRectI;
 
     if (wasPlaying) this.scheduleNext();
     else this.state.play();

@@ -1,7 +1,7 @@
 import { extractWordGeometryFromReadableNodes } from './dom/ReadableWords';
 import { ReaderPanel } from './gui/ReaderPanel';
 import { ReaderController } from './readerEngine/controller';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import type { WordGeometry } from './readerEngine/Highlighter';
 
 interface AppProps {
@@ -28,12 +28,61 @@ function getViewportSignature(): string {
 
 export default function App({ destroyCallback, wordGeometry }: AppProps) {
   const [controller] = useState(() => new ReaderController());
+
+  // pending start ctx (used for: init-before-load AND rebuild-in-flight)
   const pendingStartRef = useRef<any>(null);
+
   const loadedRef = useRef(false);
 
   const lastSigRef = useRef<string | null>(null);
   const rebuildTimerRef = useRef<number | null>(null);
   const rebuildInFlightRef = useRef(false);
+
+  const clearRebuildTimer = useCallback(() => {
+    if (rebuildTimerRef.current != null) {
+      window.clearTimeout(rebuildTimerRef.current);
+      rebuildTimerRef.current = null;
+    }
+  }, []);
+
+  const rebuildNow = useCallback(
+    (reason: string, prevSig: string | null, nextSig: string) => {
+      if (!loadedRef.current) return;
+      if (rebuildInFlightRef.current) return;
+
+      rebuildInFlightRef.current = true;
+      try {
+        const blocks = Array.from(document.querySelectorAll('.rc-highlightable[data-rcid]')) as Element[];
+
+        if (!blocks.length) {
+          console.log('[ReadCursor][viewport] rebuild skipped: no .rc-highlightable blocks found');
+          lastSigRef.current = nextSig; // prevent tight loops
+          return;
+        }
+
+        const t0 = performance.now();
+        const nextWords = extractWordGeometryFromReadableNodes(blocks) as WordGeometry[];
+        controller.reloadGeometry(nextWords);
+        const dt = Math.round(performance.now() - t0);
+
+        console.log(
+          `[ReadCursor][viewport] rebuild (${reason}) ${prevSig ?? 'null'} -> ${nextSig} blocks=${blocks.length} words=${nextWords.length} ${dt}ms`,
+        );
+
+        lastSigRef.current = nextSig;
+      } finally {
+        rebuildInFlightRef.current = false;
+
+        // If a startHere came in while we were rebuilding, run it now against fresh geometry.
+        if (pendingStartRef.current && loadedRef.current) {
+          const ctx = pendingStartRef.current;
+          pendingStartRef.current = null;
+          controller.startFromHere(ctx);
+        }
+      }
+    },
+    [controller],
+  );
 
   useEffect(() => {
     if (loadedRef.current) return;
@@ -62,50 +111,31 @@ export default function App({ destroyCallback, wordGeometry }: AppProps) {
         return;
       }
 
+      // If viewport changed since last known-good geometry, rebuild immediately
+      // so startFromHere maps against CURRENT layout.
+      const nextSig = getViewportSignature();
+      const prevSig = lastSigRef.current;
+
+      if (prevSig !== nextSig) {
+        clearRebuildTimer();
+
+        if (rebuildInFlightRef.current) {
+          // run after rebuild completes
+          pendingStartRef.current = lastCtx;
+          return;
+        }
+
+        rebuildNow('startHere', prevSig, nextSig);
+      }
+
       controller.startFromHere(lastCtx);
     };
 
     window.addEventListener('readcursor:startHere', onStartHere);
     return () => window.removeEventListener('readcursor:startHere', onStartHere);
-  }, [controller]);
+  }, [controller, rebuildNow, clearRebuildTimer]);
 
   useEffect(() => {
-    const clearRebuildTimer = () => {
-      if (rebuildTimerRef.current != null) {
-        window.clearTimeout(rebuildTimerRef.current);
-        rebuildTimerRef.current = null;
-      }
-    };
-
-    const rebuildNow = (reason: string, prevSig: string | null, nextSig: string) => {
-      if (!loadedRef.current) return;
-      if (rebuildInFlightRef.current) return;
-
-      rebuildInFlightRef.current = true;
-      try {
-        const blocks = Array.from(document.querySelectorAll('.rc-highlightable[data-rcid]')) as Element[];
-
-        if (!blocks.length) {
-          console.log('[ReadCursor][viewport] rebuild skipped: no .rc-highlightable blocks found');
-          lastSigRef.current = nextSig; // prevent tight loops
-          return;
-        }
-
-        const t0 = performance.now();
-        const nextWords = extractWordGeometryFromReadableNodes(blocks) as WordGeometry[];
-        controller.reloadGeometry(nextWords);
-        const dt = Math.round(performance.now() - t0);
-
-        console.log(
-          `[ReadCursor][viewport] rebuild (${reason}) ${prevSig ?? 'null'} -> ${nextSig} blocks=${blocks.length} words=${nextWords.length} ${dt}ms`,
-        );
-
-        lastSigRef.current = nextSig;
-      } finally {
-        rebuildInFlightRef.current = false;
-      }
-    };
-
     const requestRebuildIfNeeded = (reason: string) => {
       if (!loadedRef.current) return;
 
@@ -134,7 +164,7 @@ export default function App({ destroyCallback, wordGeometry }: AppProps) {
       window.visualViewport?.removeEventListener('resize', onVVResize);
       window.visualViewport?.removeEventListener('scroll', onVVScroll);
     };
-  }, [controller]);
+  }, [rebuildNow, clearRebuildTimer]);
 
   useEffect(() => () => controller.stop(), [controller]);
 

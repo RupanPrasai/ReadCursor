@@ -7,107 +7,99 @@ interface ReadableArticle {
   length: number;
 }
 
-function isElement(node: Node): node is Element {
-  return node.nodeType === Node.ELEMENT_NODE;
-}
-
 function isReadableTag(element: Element): boolean {
   const tag = element.tagName.toLowerCase();
-  if (
-    tag !== 'p' &&
-    tag !== 'span' &&
-    tag !== 'li' &&
-    tag !== 'dd' &&
-    tag !== 'dt' &&
-    tag !== 'h1' &&
-    tag !== 'h2' &&
-    tag !== 'h3' &&
-    tag !== 'h4' &&
-    tag !== 'h5' &&
-    tag !== 'h6'
-  ) {
-    return false;
-  }
-  return true;
+  return (
+    tag === 'p' ||
+    tag === 'span' ||
+    tag === 'li' ||
+    tag === 'dd' ||
+    tag === 'dt' ||
+    tag === 'h1' ||
+    tag === 'h2' ||
+    tag === 'h3' ||
+    tag === 'h4' ||
+    tag === 'h5' ||
+    tag === 'h6'
+  );
 }
 
 function isReadableFontSize(element: Element): boolean {
   const rect = element.getBoundingClientRect();
+  const rectHeight = rect?.height ?? 0;
+  const rectWidth = rect?.width ?? 0;
 
-  if (!rect) {
-    return false;
-  }
-
-  const rectHeight = rect.height;
-  const rectWidth = rect.width;
-
-  if (rectHeight <= 2) {
-    return false;
-  }
-
-  if (rectWidth <= 2) {
-    return false;
-  }
+  if (rectHeight <= 2) return false;
+  if (rectWidth <= 2) return false;
 
   return true;
 }
 
 function findTitleNode(title: string): HTMLElement | null {
-  if (!title) {
-    return null;
-  }
+  if (!title) return null;
 
-  title = title.trim().toLowerCase();
-
+  const normalized = title.trim().toLowerCase();
   const candidates = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
 
   for (let i = 0; i < candidates.length; i++) {
     const element = candidates[i];
     const text = element.textContent?.trim().toLowerCase();
-    if (text === title) {
+    if (text === normalized) {
       return element as HTMLElement;
     }
   }
   return null;
 }
 
+/**
+ * Stable rcid labeling rules:
+ * - Only label ELEMENT nodes (never count text nodes)
+ * - Never overwrite an existing data-rcid
+ * - Start numbering after the current max numeric rcid to avoid collisions
+ */
 function labelDomNodes(): void {
-  let rcCounter = 1;
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+  let max = 0;
 
-  while (walker.nextNode()) {
-    const node = walker.currentNode;
-
-    const id = rcCounter++;
-
-    if (isElement(node)) {
-      node.setAttribute('data-rcid', String(id));
+  // Find current max rcid (numeric only)
+  const scan = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
+  while (scan.nextNode()) {
+    const el = scan.currentNode as Element;
+    const rcid = el.getAttribute('data-rcid');
+    if (!rcid) continue;
+    if (/^\d+$/.test(rcid)) {
+      max = Math.max(max, Number(rcid));
     }
+  }
+
+  let rcCounter = max + 1;
+
+  // Label any unlabeled elements
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
+  while (walker.nextNode()) {
+    const el = walker.currentNode as Element;
+    if (el.hasAttribute('data-rcid')) continue;
+    el.setAttribute('data-rcid', String(rcCounter++));
   }
 }
 
 function readDOM(): Set<number> {
   labelDomNodes();
+
   const clone = document.cloneNode(true) as Document;
   const options = {
-    serializer: el => el,
+    serializer: (el: any) => el,
   };
 
   const reader = new Readability(clone, options);
-
   const article = reader.parse() as ReadableArticle | null;
 
   if (!article || !article.content) {
-    const readableIds = new Set<number>();
-    return readableIds;
+    return new Set<number>();
   }
 
-  let articleTitle;
   let titleNode: HTMLElement | null = null;
-
   if (article.title) {
-    articleTitle = article.title;
-    titleNode = findTitleNode(articleTitle);
+    titleNode = findTitleNode(article.title);
   }
 
   const root = article.content as HTMLElement;
@@ -124,16 +116,13 @@ function readDOM(): Set<number> {
 
   while (walker.nextNode()) {
     const node = walker.currentNode;
-    if (node.nodeType === node.ELEMENT_NODE) {
-      const element = node as Element;
-      if (!isReadableTag(element)) {
-        continue;
-      }
-      const rcid = (node as Element).getAttribute('data-rcid');
-      if (rcid) {
-        readableIds.add(Number(rcid));
-      }
-    }
+    if (node.nodeType !== node.ELEMENT_NODE) continue;
+
+    const element = node as Element;
+    if (!isReadableTag(element)) continue;
+
+    const rcid = element.getAttribute('data-rcid');
+    if (rcid) readableIds.add(Number(rcid));
   }
 
   return readableIds;
@@ -155,8 +144,13 @@ function buildNodeMap(): Map<number, Element> {
   return map;
 }
 
-function injectHighlightableCSS() {
+const HIGHLIGHT_CSS_ID = '__READCURSOR_HIGHLIGHTABLE_CSS__';
+
+function injectHighlightableCSSOnce() {
+  if (document.getElementById(HIGHLIGHT_CSS_ID)) return;
+
   const style = document.createElement('style');
+  style.id = HIGHLIGHT_CSS_ID;
 
   style.textContent = `
     .rc-highlightable {
@@ -206,6 +200,7 @@ export function getReadableNodes(): Element[] {
       result.push(element);
     }
   }
-  injectHighlightableCSS();
+
+  injectHighlightableCSSOnce();
   return result;
 }

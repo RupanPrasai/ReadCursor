@@ -4,7 +4,8 @@ export function* walkTextNodes(root: Element): Generator<Text> {
       return node.nodeValue && /\S/.test(node.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
     },
   });
-  let current;
+
+  let current: Node | null;
   while ((current = walker.nextNode())) {
     yield current as Text;
   }
@@ -13,13 +14,18 @@ export function* walkTextNodes(root: Element): Generator<Text> {
 export function getWordBoundaries(text: string): Array<[number, number]> {
   const boundaries: Array<[number, number]> = [];
   const regex = /\b[\w’']+(\b|$)/g;
-  let match;
+
+  let match: RegExpExecArray | null;
   while ((match = regex.exec(text)) !== null) {
     boundaries.push([match.index, match.index + match[0].length]);
   }
   return boundaries;
 }
 
+/**
+ * Kept for compatibility (some code may still import it).
+ * Note: extraction now uses client-space rects + local offsets.
+ */
 export function toAbsoluteRect(rect: DOMRect): DOMRect {
   return {
     x: rect.x + window.scrollX,
@@ -33,12 +39,32 @@ export function toAbsoluteRect(rect: DOMRect): DOMRect {
   } as DOMRect;
 }
 
+function rectToPlain(r: DOMRect | DOMRectReadOnly) {
+  const left = r.left;
+  const top = r.top;
+  const width = r.width;
+  const height = r.height;
+  return {
+    left,
+    top,
+    width,
+    height,
+    x: (r as any).x ?? left,
+    y: (r as any).y ?? top,
+    right: r.right ?? left + width,
+    bottom: r.bottom ?? top + height,
+  };
+}
+
 export function extractWordsFromNode(element: Element) {
   const rcid = Number(element.getAttribute('data-rcid'));
   const words: any[] = [];
 
+  // Use CLIENT-space rects (BoundingClientRect). This aligns with CSS positioning
+  // and avoids scroll/absolute-space drift under zoom/resize/visualViewport changes.
   const blockRectRaw = element.getBoundingClientRect();
-  const blockRect = toAbsoluteRect(blockRectRaw);
+  const blockRect = rectToPlain(blockRectRaw);
+
   const blockLocalRect = {
     left: 0,
     top: 0,
@@ -55,31 +81,40 @@ export function extractWordsFromNode(element: Element) {
       range.setStart(textNode, start);
       range.setEnd(textNode, end);
 
-      const rect = range.getBoundingClientRect();
-      if (rect.width < 1 || rect.height < 1) continue;
+      const wordRectRaw = range.getBoundingClientRect();
+      if (wordRectRaw.width < 1 || wordRectRaw.height < 1) continue;
 
-      const absolute = toAbsoluteRect(rect);
+      const rect = rectToPlain(wordRectRaw);
 
+      // localRect is relative to the block element's client rect.
       const localRect = {
-        left: absolute.left - blockRect.left,
-        top: absolute.top - blockRect.top,
-        width: absolute.width,
-        height: absolute.height,
+        left: rect.left - blockRect.left,
+        top: rect.top - blockRect.top,
+        width: rect.width,
+        height: rect.height,
       };
 
       words.push({
         rcid,
         text: text.slice(start, end),
+
+        // client-space rects
         blockRect,
+        rect,
+
+        // local-space rects (used by Highlighter)
         blockLocalRect,
-        rect: absolute,
         localRect,
+
+        // text-node offsets (per text node)
         start,
         end,
+
         node: element,
       });
     }
   }
+
   return words;
 }
 

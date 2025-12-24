@@ -23,7 +23,8 @@ function clampInt(raw: number, min: number, max: number) {
 }
 
 export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
-  const status = useSyncExternalStore(controller.subscribe, controller.getStatus, controller.getStatus);
+  useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
+  const status = controller.getStatus();
 
   const { readerPanelRef, startDrag, startResize } = useDraggableResizable({
     minWidth: 300,

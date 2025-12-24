@@ -59,9 +59,11 @@ export class ReaderController {
   private highlighter: Highlighter;
 
   private listeners = new Set<() => void>();
+  private revision = 0;
   private rcidPosByRcid = new Map<string, number>();
 
   private notify = () => {
+    this.revision++;
     for (const fn of this.listeners) fn();
   };
 
@@ -69,6 +71,8 @@ export class ReaderController {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
   };
+
+  public getSnapshot = () => this.revision;
 
   public getStatus = (): ReaderUIStatus => {
     const state = this.state.getState();

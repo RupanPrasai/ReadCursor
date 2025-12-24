@@ -1,3 +1,8 @@
+import { DragBar } from './DragBar';
+import { PanelShell } from './PanelShell';
+import { PlaybackControls } from './PlaybackControls';
+import { ResizeHandles } from './ResizeHandles';
+import { SpeedControls } from './SpeedControls';
 import { useDraggableResizable } from '../hooks/useDraggableResizable';
 import { useEffect, useState } from 'react';
 import type { ReaderController } from '../readerEngine/controller';
@@ -46,114 +51,34 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
   };
 
   return (
-    <div ref={readerPanelRef} className="readerpanel-container">
-      {/* Drag Bar Section */}
-      <div onMouseDown={startDrag} className="drag-bar">
-        <span className="drag-text">Drag Here</span>
-        <button onClick={onDestroy} className="close-button" aria-label="Close extension" type="button">
-          &times;
-        </button>
-      </div>
-
+    <PanelShell
+      panelRef={readerPanelRef}
+      dragBar={<DragBar onMouseDownDrag={startDrag} onClose={onDestroy} />}
+      resizeHandles={<ResizeHandles startResize={startResize} />}>
       <div className="p-4">
         <h2 className="text-lg font-semibold">Reader Panel</h2>
         <p className="text-sm text-gray-600">Floating Panel</p>
 
-        {/* CONTROLS */}
-        <div className="flex gap-2">
-          <button
-            className="rounded bg-slate-600 px-3 py-1 text-white"
-            onClick={() => controller.prevBlock()}
-            type="button"
-            aria-label="Previous block">
-            ⏮ Prev
-          </button>
-
-          <button className="rounded bg-green-600 px-3 py-1 text-white" onClick={() => controller.play()} type="button">
-            Play
-          </button>
-
-          <button
-            className="rounded bg-yellow-500 px-3 py-1 text-white"
-            onClick={() => controller.pause()}
-            type="button">
-            Pause
-          </button>
-
-          <button className="rounded bg-red-600 px-3 py-1 text-white" onClick={() => controller.stop()} type="button">
-            Stop
-          </button>
-
-          <button
-            className="rounded bg-slate-600 px-3 py-1 text-white"
-            onClick={() => controller.nextBlock()}
-            type="button"
-            aria-label="Next block">
-            Next ⏭
-          </button>
-        </div>
+        <PlaybackControls
+          onPrev={() => controller.prevBlock()}
+          onPlay={() => controller.play()}
+          onPause={() => controller.pause()}
+          onStop={() => controller.stop()}
+          onNext={() => controller.nextBlock()}
+        />
       </div>
 
-      {/* WPM */}
-      <div className="mt-4 px-6">
-        <div className="mx-auto flex max-w-sm flex-col items-center gap-3">
-          <div className="text-lg font-semibold text-gray-900">Speed</div>
-          <div className="flex items-center justify-center gap-2">
-            <input
-              type="number"
-              min={MIN_WPM}
-              max={MAX_WPM}
-              step={STEP_WPM}
-              value={wpmText}
-              onChange={event => setWpmText(event.target.value)}
-              onBlur={commitWpmText}
-              onKeyDown={event => {
-                if (event.key === 'Enter') (event.currentTarget as HTMLInputElement).blur();
-              }}
-              className="w-24 rounded border border-gray-300 px-2 py-1 text-center text-sm"
-              aria-label="WPM input"
-            />
-            <span className="text-sm text-gray-700">WPM</span>
-          </div>
-
-          {/* WPM Slider */}
-          <input
-            type="range"
-            min={MIN_WPM}
-            max={MAX_WPM}
-            step={STEP_WPM}
-            value={wpm}
-            onChange={event => setWpm(Number(event.target.value))}
-            className="w-42"
-            aria-label="Words per minute"
-          />
-
-          {/* WPM Presets */}
-          <div className="flex flex-wrap justify-center gap-2">
-            {WPM_PRESETS.map(preset => (
-              <button
-                key={preset}
-                className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100"
-                onClick={() => setWpm(preset)}
-                type="button">
-                {preset}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Corners */}
-      <div onMouseDown={startResize('nw')} className="handle handle-nw" />
-      <div onMouseDown={startResize('ne')} className="handle handle-ne" />
-      <div onMouseDown={startResize('sw')} className="handle handle-sw" />
-      <div onMouseDown={startResize('se')} className="handle handle-se" />
-
-      {/* Edges */}
-      <div onMouseDown={startResize('n')} className="handle handle-n" />
-      <div onMouseDown={startResize('s')} className="handle handle-s" />
-      <div onMouseDown={startResize('e')} className="handle handle-e" />
-      <div onMouseDown={startResize('w')} className="handle handle-w" />
-    </div>
+      <SpeedControls
+        wpm={wpm}
+        wpmText={wpmText}
+        minWpm={MIN_WPM}
+        maxWpm={MAX_WPM}
+        stepWpm={STEP_WPM}
+        presets={WPM_PRESETS}
+        onWpmChange={setWpm}
+        onWpmTextChange={setWpmText}
+        onCommitText={commitWpmText}
+      />
+    </PanelShell>
   );
 }

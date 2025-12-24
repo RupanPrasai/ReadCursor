@@ -4,7 +4,7 @@ import { PlaybackControls } from './PlaybackControls';
 import { ResizeHandles } from './ResizeHandles';
 import { SpeedControls } from './SpeedControls';
 import { useDraggableResizable } from '../hooks/useDraggableResizable';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { ReaderController } from '../readerEngine/controller';
 
 interface ReaderPanelProps {
@@ -23,6 +23,8 @@ function clampInt(raw: number, min: number, max: number) {
 }
 
 export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
+  const status = useSyncExternalStore(controller.subscribe, controller.getStatus, controller.getStatus);
+
   const { readerPanelRef, startDrag, startResize } = useDraggableResizable({
     minWidth: 300,
     maxWidth: 800,
@@ -65,6 +67,11 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
           onPause={() => controller.pause()}
           onStop={() => controller.stop()}
           onNext={() => controller.nextBlock()}
+          canPrev={status.canPrevBlock}
+          canPlay={status.canPlay}
+          canPause={status.canPause}
+          canStop={status.canStop}
+          canNext={status.canNextBlock}
         />
       </div>
 

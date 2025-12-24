@@ -169,6 +169,8 @@ export class ReaderController {
 
     this.rebuildRangesAndOrder(words);
     this.state.setReady();
+
+    this.notify();
   }
 
   /**
@@ -258,21 +260,26 @@ export class ReaderController {
 
     // READY (or other non-playing state): just show the highlight at the same place.
     this.seek(highlightIndex);
+
+    this.notify();
   }
 
   play() {
     this.resumePending = this.state.isPaused();
     this.state.play();
+    this.notify();
   }
 
   pause() {
     this.state.pause();
+    this.notify();
   }
 
   stop() {
     this.resumePending = false;
     this.state.stop();
     this.state.setReady();
+    this.notify();
   }
 
   private getAnchorWordIndex() {
@@ -304,6 +311,8 @@ export class ReaderController {
     if (wasPlaying)
       this.scheduleNext(); // highlights + continues
     else this.seek(i); // highlights only, no auto-advance
+
+    this.notify();
   }
 
   prevBlock() {
@@ -353,6 +362,7 @@ export class ReaderController {
    *      ALWAYS use char-offset mapping (layout-proof under zoom/resize reflow).
    *  - Only fallback to rect-proximity when selection mapping is not available.
    */
+
   startFromHere(lastCtx: {
     rcid?: string | number | null;
     clientX: number;
@@ -430,6 +440,7 @@ export class ReaderController {
     // ✅ HARD RULE: if we have a usable selection mapping, NEVER choose by rect proximity.
     if (bestCharI != null) {
       const wasPlaying = this.state.isPlaying();
+
       this.clearTimer();
       this.resumePending = false;
       this.highlighter.clearAll();
@@ -437,6 +448,8 @@ export class ReaderController {
 
       if (wasPlaying) this.scheduleNext();
       else this.state.play();
+
+      this.notify(); // <-- only notify when we actually changed state/index
       return;
     }
 
@@ -478,6 +491,7 @@ export class ReaderController {
     }
 
     const wasPlaying = this.state.isPlaying();
+
     this.clearTimer();
     this.resumePending = false;
     this.highlighter.clearAll();
@@ -485,6 +499,8 @@ export class ReaderController {
 
     if (wasPlaying) this.scheduleNext();
     else this.state.play();
+
+    this.notify(); // <-- notify once after mutation
   }
 
   private startPlayback() {
@@ -563,6 +579,8 @@ export class ReaderController {
     const currentWord = this.words[this.index];
     this.highlighter.highlightBlock(currentWord);
     this.highlighter.highlightWord(currentWord);
+
+    this.notify();
   }
 
   /**
@@ -576,6 +594,8 @@ export class ReaderController {
     // index should point to the next word to play
     const next = i + 1;
     this.index = next <= this.words.length ? next : this.words.length;
+
+    this.notify();
   }
 
   setWPM(raw: number) {
@@ -588,5 +608,7 @@ export class ReaderController {
       this.clearTimer();
       this.scheduleTickOnly();
     }
+
+    this.notify();
   }
 }

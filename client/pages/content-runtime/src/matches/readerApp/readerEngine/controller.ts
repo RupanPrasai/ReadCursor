@@ -2,6 +2,7 @@ import { AutoScroll } from './AutoScroll';
 import { Highlighter } from './Highlighter';
 import { ReaderStateMachine } from './state';
 import type { WordGeometry } from './Highlighter';
+import type { ReaderState } from './state';
 
 function clampInt(raw: number, min: number, max: number) {
   const num = Number.isFinite(raw) ? Math.trunc(raw) : min;
@@ -16,6 +17,21 @@ export type ReaderAnchorSnapshot = {
   offsetInBlock: number; // 0 = first word of block
   absoluteIndex: number; // fallback
   state: ReturnType<ReaderStateMachine['getState']>;
+};
+
+export type ReaderUIStatus = {
+  state: ReaderState;
+  hasWords: boolean;
+  wpm: number;
+  anchorIndex: number;
+  wordCount: number;
+  rcid: string | null;
+
+  canPlay: boolean;
+  canPause: boolean;
+  canStop: boolean;
+  canPrevBlock: boolean;
+  canNextBlock: boolean;
 };
 
 export class ReaderController {
@@ -41,6 +57,61 @@ export class ReaderController {
 
   private autoScroll: AutoScroll;
   private highlighter: Highlighter;
+
+  private listeners = new Set<() => void>();
+  private rcidPosByRcid = new Map<string, number>();
+
+  private notify = () => {
+    for (const fn of this.listeners) fn();
+  };
+
+  public subscribe = (fn: () => void) => {
+    this.listeners.add(fn);
+    return () => this.listeners.delete(fn);
+  };
+
+  public getStatus = (): ReaderUIStatus => {
+    const state = this.state.getState();
+    const hasWords = this.words.length > 0;
+    const rcid = this.getCurrentRcid();
+    const anchorIndex = this.getAnchorWordIndex();
+    const wordCount = this.words.length;
+
+    const canPlay = state === 'READY' || state === 'PAUSED';
+    const canPause = state === 'PLAYING';
+    const canStop = state === 'PLAYING' || state === 'PAUSED';
+
+    let canPrevBlock = false;
+    let canNextBlock = false;
+
+    if (hasWords && rcid) {
+      const range = this.rangeByRcid.get(rcid);
+      const pos = this.rcidPosByRcid.get(rcid);
+
+      // matches your prevBlock() semantics:
+      // - if not at first word of block, "Prev" restarts block
+      // - else it goes to previous block if one exists
+      if (range && anchorIndex > range.start) canPrevBlock = true;
+      else if (typeof pos === 'number' && pos > 0) canPrevBlock = true;
+
+      if (typeof pos === 'number' && pos < this.orderedRcids.length - 1) canNextBlock = true;
+    }
+
+    return {
+      state,
+      hasWords,
+      wpm: this.wpm,
+      anchorIndex,
+      wordCount,
+      rcid,
+
+      canPlay,
+      canPause,
+      canStop,
+      canPrevBlock,
+      canNextBlock,
+    };
+  };
 
   constructor() {
     this.autoScroll = new AutoScroll();
@@ -82,6 +153,11 @@ export class ReaderController {
     this.orderedRcids = Array.from(this.rangeByRcid.entries())
       .sort((a, b) => a[1].start - b[1].start)
       .map(([rcid]) => rcid);
+
+    this.rcidPosByRcid.clear();
+    for (let i = 0; i < this.orderedRcids.length; i++) {
+      this.rcidPosByRcid.set(this.orderedRcids[i], i);
+    }
   }
 
   load(words: WordGeometry[]) {

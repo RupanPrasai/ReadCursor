@@ -1,0 +1,76 @@
+/* Resize hitzones */
+.handle {
+  position: absolute;
+  background: transparent;
+  pointer-events: auto;
+  padding: 0;
+  margin: 0;
+}
+
+.handle-n {
+  top: -4px;
+  left: 50%;
+  width: 80%;
+  height: 6px;
+  cursor: n-resize;
+  transform: translateX(-50%);
+}
+
+.handle-s {
+  bottom: -3px;
+  left: 50%;
+  width: 80%;
+  height: 6px;
+  cursor: s-resize;
+  transform: translateX(-50%);
+}
+
+.handle-e {
+  right: -3px;
+  top: 50%;
+  width: 6px;
+  height: 80%;
+  cursor: e-resize;
+  transform: translateY(-50%);
+}
+
+.handle-w {
+  left: -3px;
+  top: 50%;
+  width: 6px;
+  height: 80%;
+  cursor: w-resize;
+  transform: translateY(-50%);
+}
+
+.handle-se {
+  right: -3px;
+  bottom: -3px;
+  width: 12px;
+  height: 12px;
+  cursor: se-resize;
+}
+
+.handle-sw {
+  left: -3px;
+  bottom: -3px;
+  width: 12px;
+  height: 12px;
+  cursor: sw-resize;
+}
+
+.handle-ne {
+  right: -3px;
+  top: -3px;
+  width: 12px;
+  height: 12px;
+  cursor: ne-resize;
+}
+
+.handle-nw {
+  left: -3px;
+  top: -3px;
+  width: 12px;
+  height: 12px;
+  cursor: nw-resize;
+}

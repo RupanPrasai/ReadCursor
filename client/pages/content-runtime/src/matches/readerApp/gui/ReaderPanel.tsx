@@ -26,6 +26,17 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
   useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const status = controller.getStatus();
 
+  const state = String(status.state ?? 'UNKNOWN');
+
+  const statusPill =
+    state === 'PLAYING'
+      ? { label: 'Playing', cls: 'border-emerald-200 bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500' }
+      : state === 'PAUSED'
+        ? { label: 'Paused', cls: 'border-amber-200 bg-amber-50 text-amber-800', dot: 'bg-amber-500' }
+        : state === 'READY' || state === 'STOPPED'
+          ? { label: 'Ready', cls: 'border-slate-200 bg-slate-50 text-slate-700', dot: 'bg-slate-400' }
+          : { label: state, cls: 'border-slate-200 bg-slate-50 text-slate-700', dot: 'bg-slate-400' };
+
   const { readerPanelRef, startDrag, startResize } = useDraggableResizable({
     minWidth: 300,
     maxWidth: 800,
@@ -65,7 +76,13 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
             <p className="mt-0.5 text-xs text-slate-600">Floating Panel</p>
           </div>
 
-          {/* optional later: status pill goes here */}
+          <div
+            className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium ${statusPill.cls}`}
+            title={`State: ${state}`}
+            aria-label={`Reader status: ${statusPill.label}`}>
+            <span className={`h-2 w-2 rounded-full ${statusPill.dot}`} />
+            {statusPill.label}
+          </div>
         </div>
 
         <div className="mt-3">

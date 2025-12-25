@@ -22,11 +22,11 @@ export function SpeedControls({
   onCommitText,
 }: SpeedControlsProps) {
   return (
-    <div className="mt-4 px-6">
-      <div className="mx-auto flex max-w-sm flex-col items-center gap-3">
-        <div className="text-lg font-semibold text-gray-900">Speed</div>
+    <div className="border-t border-slate-200 px-4 py-3">
+      <div className="flex items-center justify-between">
+        <div className="text-sm font-semibold text-slate-900">Speed</div>
 
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center gap-2">
           <input
             type="number"
             min={minWpm}
@@ -38,12 +38,14 @@ export function SpeedControls({
             onKeyDown={event => {
               if (event.key === 'Enter') (event.currentTarget as HTMLInputElement).blur();
             }}
-            className="w-24 rounded border border-gray-300 px-2 py-1 text-center text-sm"
+            className="h-8 w-20 rounded-md border border-slate-300 bg-white px-2 text-center text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
             aria-label="WPM input"
           />
-          <span className="text-sm text-gray-700">WPM</span>
+          <span className="text-xs text-slate-600">WPM</span>
         </div>
+      </div>
 
+      <div className="mt-3">
         <input
           type="range"
           min={minWpm}
@@ -51,21 +53,21 @@ export function SpeedControls({
           step={stepWpm}
           value={wpm}
           onChange={event => onWpmChange(Number(event.target.value))}
-          className="w-42"
+          className="w-full"
           aria-label="Words per minute"
         />
+      </div>
 
-        <div className="flex flex-wrap justify-center gap-2">
-          {presets.map(preset => (
-            <button
-              key={preset}
-              className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100"
-              onClick={() => onWpmChange(preset)}
-              type="button">
-              {preset}
-            </button>
-          ))}
-        </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {presets.map(preset => (
+          <button
+            key={preset}
+            className="h-7 rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-800 hover:bg-slate-100 active:bg-slate-200"
+            onClick={() => onWpmChange(preset)}
+            type="button">
+            {preset}
+          </button>
+        ))}
       </div>
     </div>
   );

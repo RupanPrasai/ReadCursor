@@ -59,21 +59,29 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
       dragBar={<DragBar onMouseDownDrag={startDrag} onClose={onDestroy} />}
       resizeHandles={<ResizeHandles startResize={startResize} />}>
       <div className="p-4">
-        <h2 className="text-lg font-semibold">Reader Panel</h2>
-        <p className="text-sm text-gray-600">Floating Panel</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900">Reader Panel</h2>
+            <p className="mt-0.5 text-xs text-slate-600">Floating Panel</p>
+          </div>
 
-        <PlaybackControls
-          onPrev={() => controller.prevBlock()}
-          onPlay={() => controller.play()}
-          onPause={() => controller.pause()}
-          onStop={() => controller.stop()}
-          onNext={() => controller.nextBlock()}
-          canPrev={status.canPrevBlock}
-          canPlay={status.canPlay}
-          canPause={status.canPause}
-          canStop={status.canStop}
-          canNext={status.canNextBlock}
-        />
+          {/* optional later: status pill goes here */}
+        </div>
+
+        <div className="mt-3">
+          <PlaybackControls
+            onPrev={() => controller.prevBlock()}
+            onPlay={() => controller.play()}
+            onPause={() => controller.pause()}
+            onStop={() => controller.stop()}
+            onNext={() => controller.nextBlock()}
+            canPrev={status.canPrevBlock}
+            canPlay={status.canPlay}
+            canPause={status.canPause}
+            canStop={status.canStop}
+            canNext={status.canNextBlock}
+          />
+        </div>
       </div>
 
       <SpeedControls

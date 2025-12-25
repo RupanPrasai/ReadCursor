@@ -117,6 +117,26 @@ export class ReaderController {
     };
   };
 
+  private getNavFlagsForCurrentAnchor() {
+    const rcid = this.getCurrentRcid();
+    const anchorIndex = this.getAnchorWordIndex();
+
+    let canPrevBlock = false;
+    let canNextBlock = false;
+
+    if (this.words.length && rcid) {
+      const range = this.rangeByRcid.get(rcid);
+      const pos = this.rcidPosByRcid.get(rcid);
+
+      if (range && anchorIndex > range.start) canPrevBlock = true;
+      else if (typeof pos === 'number' && pos > 0) canPrevBlock = true;
+
+      if (typeof pos === 'number' && pos < this.orderedRcids.length - 1) canNextBlock = true;
+    }
+
+    return { canPrevBlock, canNextBlock };
+  }
+
   constructor() {
     this.autoScroll = new AutoScroll();
     this.highlighter = new Highlighter(this.autoScroll);
@@ -532,6 +552,7 @@ export class ReaderController {
 
   private advanceWord() {
     this.scheduleNext();
+    this.notify();
   }
 
   private scheduleTickOnly() {

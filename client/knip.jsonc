@@ -1,0 +1,22 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema-jsonc.json",
+  // Your entry/bundle roots (IMPORTANT: must match what your manifest/build actually uses)
+  "entry": [
+    "src/**/content*.{ts,tsx}",
+    "src/**/background*.{ts,tsx}",
+    "src/**/service-worker*.{ts,tsx}",
+    "src/**/{index,main}.{ts,tsx}",
+    "src/**/{popup,options}.{ts,tsx}"
+  ],
+  // What “belongs” to this package (exclude build outputs here, NOT via ignore)
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "build.mts",
+    "tailwind.config.ts",
+    "!dist/**",
+    "!build/**",
+    "!.output/**"
+  ],
+  // If you want Knip to also report unused exports *inside entry files*
+  "includeEntryExports": true
+}

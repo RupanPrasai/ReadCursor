@@ -1,3 +1,5 @@
+import { IconButton } from './IconButton';
+
 interface DragBarProps {
   onMouseDownDrag: (event: React.MouseEvent<HTMLDivElement>) => void;
   onClose: () => void;
@@ -12,30 +14,13 @@ export function DragBar({ onMouseDownDrag, onClose, onMinimize }: DragBarProps) 
       <span className="flex-1 text-sm font-medium text-slate-700">Drag Here</span>
 
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onMouseDown={e => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-          onClick={onMinimize}
-          className="grid h-[18px] w-[18px] place-items-center rounded-full border border-black/40 bg-[#ffbd2e] text-[14px] font-bold leading-none text-slate-900 shadow-sm hover:bg-amber-400"
-          aria-label="Minimize reader panel"
-          title="Minimize">
+        <IconButton ariaLabel="Minimize reader panel" title="Minimize" variant="warning" onClick={onMinimize}>
           —
-        </button>
-        <button
-          type="button"
-          onMouseDown={e => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-          onClick={onClose}
-          className="grid h-[18px] w-[18px] place-items-center rounded-full border border-black/60 bg-[#ff5f56] text-[14px] font-bold leading-none text-slate-800 shadow-sm hover:bg-red-500 hover:text-white"
-          aria-label="Close extension"
-          title="Close">
+        </IconButton>
+
+        <IconButton ariaLabel="Close extension" title="Close" variant="danger" onClick={onClose}>
           &times;
-        </button>
+        </IconButton>
       </div>
     </div>
   );

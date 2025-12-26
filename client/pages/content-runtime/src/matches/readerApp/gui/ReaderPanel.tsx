@@ -1,4 +1,5 @@
 import { DragBar } from './DragBar';
+import { IconButton } from './IconButton';
 import { PanelShell } from './PanelShell';
 import { PlaybackControls } from './PlaybackControls';
 import { ResizeHandles } from './ResizeHandles';
@@ -130,10 +131,18 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
   };
 
   const restore = () => {
-    setMode('open');
+    // While still minimized, grab the pill’s current position.
+    const pill = readRect(); // pill width/height will be PILL_W/PILL_H
 
-    if (savedRect) setPendingStyle({ kind: 'apply', rect: savedRect });
-    else setPendingStyle({ kind: 'clear' });
+    const base = savedRect ?? { left: 96, top: 96, width: 300, height: 400 };
+
+    const next: PanelRect = pill
+      ? { ...base, left: pill.left, top: pill.top } // keep open size, move to pill location
+      : base;
+
+    setMode('open');
+    setSavedRect(next); // so future minimize/restore uses the updated open position
+    setPendingStyle({ kind: 'apply', rect: next });
   };
 
   const [wpm, setWpm] = useState<number>(150);
@@ -180,25 +189,13 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
         </div>
 
         <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onMouseDown={e => e.stopPropagation()}
-            onClick={restore}
-            className="grid h-7 w-7 place-items-center rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-            aria-label="Restore reader panel"
-            title="Restore">
+          <IconButton ariaLabel="Restore reader panel" title="Restore" variant="neutral" onClick={restore}>
             ↗
-          </button>
+          </IconButton>
 
-          <button
-            type="button"
-            onMouseDown={e => e.stopPropagation()}
-            onClick={onDestroy}
-            className="grid h-7 w-7 place-items-center rounded-full border border-black/60 bg-[#ff5f56] text-[14px] font-bold leading-none text-slate-800 shadow-sm hover:bg-red-500 hover:text-white"
-            aria-label="Close extension"
-            title="Close">
+          <IconButton ariaLabel="Close extension" title="Close" variant="danger" onClick={onDestroy}>
             &times;
-          </button>
+          </IconButton>
         </div>
       </div>
     );
@@ -227,9 +224,6 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
               <span className={`h-2 w-2 rounded-full ${statusPill.dot}`} />
               {statusPill.label}
             </div>
-
-            {/* Minimize lives here for now (zero dependency on DragBar changes).
-                If you want it in the DragBar, we’ll move it next. */}
           </div>
         </div>
 

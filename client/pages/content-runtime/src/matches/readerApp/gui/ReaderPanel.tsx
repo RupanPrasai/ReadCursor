@@ -164,6 +164,8 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
       <div
         ref={readerPanelRef}
         onMouseDown={startDrag}
+        onDoubleClick={restore}
+        title="Double-click to restore"
         className="fixed z-[999999] flex select-none items-center justify-between gap-2 rounded-full border border-slate-200 bg-white px-2.5 shadow-2xl"
         aria-label="Reader panel minimized">
         <div className="flex min-w-0 items-center gap-2">
@@ -261,4 +263,3 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
     </PanelShell>
   );
 }
-

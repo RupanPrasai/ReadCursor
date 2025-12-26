@@ -1,5 +1,3 @@
-import type { ReaderStateMachine } from './state';
-
 export class AutoScroll {
   private margin = 200;
   private isScrolling = false;

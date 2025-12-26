@@ -1,5 +1,7 @@
 import { useRef } from 'react';
 
+type ResizeDir = 'nw' | 'ne' | 'sw' | 'se' | 'n' | 's' | 'e' | 'w';
+
 export function useDraggableResizable(options: {
   minWidth: number;
   maxWidth: number;
@@ -11,6 +13,9 @@ export function useDraggableResizable(options: {
   const startDrag = (event: React.MouseEvent<HTMLDivElement>) => {
     const readerPanel = readerPanelRef.current;
     if (!readerPanel) return;
+
+    // Prevent text selection / native drag behaviors while dragging
+    event.preventDefault();
 
     const startX = event.clientX;
     const startY = event.clientY;
@@ -33,65 +38,83 @@ export function useDraggableResizable(options: {
     document.addEventListener('mouseup', onMouseUp);
   };
 
+  const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
   // Resize ReaderPanel Container
+  const startResize = (direction: ResizeDir) => (event: React.MouseEvent<HTMLDivElement>) => {
+    event.stopPropagation();
+    event.preventDefault(); // critical: prevents text selection during resize
 
-  const startResize =
-    (direction: 'nw' | 'ne' | 'sw' | 'se' | 'n' | 's' | 'e' | 'w') => (event: React.MouseEvent<HTMLDivElement>) => {
-      event.stopPropagation();
+    const readerPanel = readerPanelRef.current;
+    if (!readerPanel) return;
 
-      const readerPanel = readerPanelRef.current;
-      if (!readerPanel) return;
+    const startX = event.clientX;
+    const startY = event.clientY;
 
-      const startX = event.clientX;
-      const startY = event.clientY;
-      const startWidth = readerPanel.offsetWidth;
-      const startHeight = readerPanel.offsetHeight;
-      const startLeft = readerPanel.offsetLeft;
-      const startTop = readerPanel.offsetTop;
+    const startWidth = readerPanel.offsetWidth;
+    const startHeight = readerPanel.offsetHeight;
+    const startLeft = readerPanel.offsetLeft;
+    const startTop = readerPanel.offsetTop;
 
-      const onMouseMove = (event: MouseEvent) => {
-        let newWidth = startWidth;
-        let newHeight = startHeight;
-        let newLeft = startLeft;
-        let newTop = startTop;
+    // Anchor edges so min-size clamping doesn't translate the panel.
+    const startRight = startLeft + startWidth;
+    const startBottom = startTop + startHeight;
 
-        const dx = event.clientX - startX;
-        const dy = event.clientY - startY;
+    const onMouseMove = (event: MouseEvent) => {
+      const dx = event.clientX - startX;
+      const dy = event.clientY - startY;
 
-        // Horizontal Resize
-        if (direction.includes('e')) newWidth = startWidth + dx;
+      let newWidth = startWidth;
+      let newHeight = startHeight;
+      let newLeft = startLeft;
+      let newTop = startTop;
 
-        if (direction.includes('w')) {
-          newWidth = startWidth - dx;
-          newLeft = startLeft + dx;
-        }
+      // --- Horizontal ---
+      if (direction.includes('e')) {
+        // Right edge follows mouse
+        const desiredWidth = startWidth + dx;
+        newWidth = clamp(desiredWidth, options.minWidth, options.maxWidth);
+        // left stays anchored at startLeft
+        newLeft = startLeft;
+      }
 
-        // Vertical Resize
-        if (direction.includes('s')) newHeight = startHeight + dy;
+      if (direction.includes('w')) {
+        // Left edge follows mouse but right edge is anchored
+        const desiredWidth = startWidth - dx;
+        newWidth = clamp(desiredWidth, options.minWidth, options.maxWidth);
+        newLeft = startRight - newWidth; // <- key fix: recompute from anchored right edge
+      }
 
-        if (direction.includes('n')) {
-          newHeight = startHeight - dy;
-          newTop = startTop + dy;
-        }
+      // --- Vertical ---
+      if (direction.includes('s')) {
+        // Bottom edge follows mouse
+        const desiredHeight = startHeight + dy;
+        newHeight = clamp(desiredHeight, options.minHeight, options.maxHeight);
+        newTop = startTop;
+      }
 
-        // Clamp
-        newWidth = Math.min(Math.max(newWidth, options.minWidth), options.maxWidth);
-        newHeight = Math.min(Math.max(newHeight, options.minHeight), options.maxHeight);
+      if (direction.includes('n')) {
+        // Top edge follows mouse but bottom edge is anchored
+        const desiredHeight = startHeight - dy;
+        newHeight = clamp(desiredHeight, options.minHeight, options.maxHeight);
+        newTop = startBottom - newHeight; // <- key fix: recompute from anchored bottom edge
+      }
 
-        readerPanel.style.width = `${newWidth}px`;
-        readerPanel.style.height = `${newHeight}px`;
-        readerPanel.style.left = `${newLeft}px`;
-        readerPanel.style.top = `${newTop}px`;
-      };
-
-      const onMouseUp = () => {
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
-      };
-
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', onMouseUp);
+      readerPanel.style.width = `${newWidth}px`;
+      readerPanel.style.height = `${newHeight}px`;
+      readerPanel.style.left = `${newLeft}px`;
+      readerPanel.style.top = `${newTop}px`;
     };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
 
   return { readerPanelRef, startDrag, startResize };
 }
+

@@ -14,25 +14,29 @@ export function DragBar({ onMouseDownDrag, onClose, onMinimize }: DragBarProps) 
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onMouseDown={e => e.stopPropagation()}
+          onMouseDown={e => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
           onClick={onMinimize}
           className="grid h-[18px] w-[18px] place-items-center rounded-full border border-black/40 bg-[#ffbd2e] text-[14px] font-bold leading-none text-slate-900 shadow-sm hover:bg-amber-400"
           aria-label="Minimize reader panel"
           title="Minimize">
           —
         </button>
-
         <button
-          onMouseDown={e => e.stopPropagation()}
+          type="button"
+          onMouseDown={e => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
           onClick={onClose}
           className="grid h-[18px] w-[18px] place-items-center rounded-full border border-black/60 bg-[#ff5f56] text-[14px] font-bold leading-none text-slate-800 shadow-sm hover:bg-red-500 hover:text-white"
           aria-label="Close extension"
-          title="Close"
-          type="button">
+          title="Close">
           &times;
         </button>
       </div>
     </div>
   );
 }
-

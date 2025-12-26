@@ -38,7 +38,7 @@ export function SpeedControls({
             onKeyDown={event => {
               if (event.key === 'Enter') (event.currentTarget as HTMLInputElement).blur();
             }}
-            className="h-8 w-20 rounded-md border border-slate-300 bg-white px-2 text-center text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+            className="h-8 w-20 select-text rounded-md border border-slate-300 bg-white px-2 text-center text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
             aria-label="WPM input"
           />
           <span className="text-xs text-slate-600">WPM</span>

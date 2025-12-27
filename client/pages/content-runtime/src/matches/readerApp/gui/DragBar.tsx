@@ -15,7 +15,9 @@ export function DragBar({ onMouseDownDrag, onClose, onMinimize }: DragBarProps) 
 
       <div className="flex items-center gap-2">
         <IconButton ariaLabel="Minimize reader panel" title="Minimize" variant="warning" onClick={onMinimize}>
-          —
+          <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+            <path d="M7 12h10" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+          </svg>
         </IconButton>
 
         <IconButton ariaLabel="Close extension" title="Close" variant="danger" onClick={onClose}>

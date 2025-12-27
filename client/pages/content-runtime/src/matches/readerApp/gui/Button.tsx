@@ -21,7 +21,7 @@ export function Button({ variant = 'neutral', size = 'md', className, ...rest }:
   const sizes: Record<ButtonSize, string> = {
     md: 'h-7 px-3 text-sm rounded-md',
     lg: 'h-9 px-3.5 text-sm rounded-md',
-    icon: 'h-9 w-9 p-0 rounded-lg', // <- perfect for toolbars
+    icon: 'h-10 w-10 p-0 rounded-xl',
   };
 
   const variants: Record<ButtonVariant, string> = {

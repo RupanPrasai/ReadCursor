@@ -1,6 +1,6 @@
 import type * as React from 'react';
 
-type IconButtonVariant = 'neutral' | 'warning' | 'danger';
+type IconButtonVariant = 'neutral' | 'warning' | 'success' | 'danger';
 type IconButtonSize = 'sm' | 'md';
 
 export interface IconButtonProps
@@ -37,10 +37,10 @@ export function IconButton({
     md: 'h-7 w-7 text-[14px] font-bold leading-none',
   };
 
-  // Match your existing “traffic light” styling for warning/danger.
   const variants: Record<IconButtonVariant, string> = {
     neutral: 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
     warning: 'border border-black/40 bg-[#ffbd2e] text-slate-900 hover:bg-amber-400',
+    success: 'border border-black/40 bg-[#28c840] text-slate-900 hover:bg-emerald-500',
     danger: 'border border-black/60 bg-[#ff5f56] text-slate-800 hover:bg-red-500 hover:text-white',
   };
 
@@ -51,7 +51,6 @@ export function IconButton({
       title={title ?? ariaLabel}
       disabled={disabled}
       onMouseDown={e => {
-        // Don’t start drag / don’t select text when clicking controls inside draggable UI.
         e.preventDefault();
         e.stopPropagation();
         onMouseDown?.(e);

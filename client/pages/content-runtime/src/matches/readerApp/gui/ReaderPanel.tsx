@@ -189,8 +189,8 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
         </div>
 
         <div className="flex items-center gap-1">
-          <IconButton ariaLabel="Restore reader panel" title="Restore" variant="neutral" onClick={restore}>
-            ↗
+          <IconButton ariaLabel="Restore reader panel" title="Restore" variant="success" onClick={restore}>
+            +
           </IconButton>
 
           <IconButton ariaLabel="Close extension" title="Close" variant="danger" onClick={onDestroy}>

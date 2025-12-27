@@ -10,8 +10,23 @@ export function DragBar({ onMouseDownDrag, onClose, onMinimize }: DragBarProps) 
   return (
     <div
       onMouseDown={onMouseDownDrag}
-      className="relative z-10 flex cursor-move select-none items-center justify-between gap-4 rounded-t-xl border-b border-slate-200 bg-slate-100 px-4 py-2">
-      <span className="flex-1 text-sm font-medium text-slate-700">Drag Here</span>
+      className="group relative z-10 flex cursor-grab select-none items-center justify-between gap-4 rounded-t-xl border-b border-slate-200 bg-slate-100 px-4 py-2 active:cursor-grabbing"
+      aria-label="Drag reader panel"
+      title="Drag">
+      <div className="flex-1">
+        <svg
+          viewBox="0 0 24 24"
+          className="h-7 w-7 text-slate-400 opacity-60 transition-opacity group-hover:opacity-90"
+          aria-hidden="true">
+          {/* 2 columns x 3 rows of dots */}
+          <circle cx="9" cy="7" r="1.2" fill="currentColor" />
+          <circle cx="15" cy="7" r="1.2" fill="currentColor" />
+          <circle cx="9" cy="12" r="1.2" fill="currentColor" />
+          <circle cx="15" cy="12" r="1.2" fill="currentColor" />
+          <circle cx="9" cy="17" r="1.2" fill="currentColor" />
+          <circle cx="15" cy="17" r="1.2" fill="currentColor" />
+        </svg>
+      </div>
 
       <div className="flex items-center gap-2">
         <IconButton ariaLabel="Minimize reader panel" title="Minimize" variant="warning" onClick={onMinimize}>

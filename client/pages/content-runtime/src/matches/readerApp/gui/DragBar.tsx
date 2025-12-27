@@ -4,21 +4,21 @@ interface DragBarProps {
   onMouseDownDrag: (event: React.MouseEvent<HTMLDivElement>) => void;
   onClose: () => void;
   onMinimize: () => void;
+  statusNode?: React.ReactNode;
 }
 
-export function DragBar({ onMouseDownDrag, onClose, onMinimize }: DragBarProps) {
+export function DragBar({ onMouseDownDrag, onClose, onMinimize, statusNode }: DragBarProps) {
   return (
     <div
       onMouseDown={onMouseDownDrag}
       className="group relative z-10 flex cursor-grab select-none items-center justify-between gap-4 rounded-t-xl border-b border-slate-200 bg-slate-100 px-4 py-2 active:cursor-grabbing"
       aria-label="Drag reader panel"
       title="Drag">
-      <div className="flex-1">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
         <svg
           viewBox="0 0 24 24"
-          className="h-7 w-7 text-slate-400 opacity-60 transition-opacity group-hover:opacity-90"
+          className="h-7 w-7 shrink-0 text-slate-400 opacity-60 transition-opacity group-hover:opacity-90"
           aria-hidden="true">
-          {/* 2 columns x 3 rows of dots */}
           <circle cx="9" cy="7" r="1.2" fill="currentColor" />
           <circle cx="15" cy="7" r="1.2" fill="currentColor" />
           <circle cx="9" cy="12" r="1.2" fill="currentColor" />
@@ -26,6 +26,8 @@ export function DragBar({ onMouseDownDrag, onClose, onMinimize }: DragBarProps) 
           <circle cx="9" cy="17" r="1.2" fill="currentColor" />
           <circle cx="15" cy="17" r="1.2" fill="currentColor" />
         </svg>
+
+        {statusNode}
       </div>
 
       <div className="flex items-center gap-2">

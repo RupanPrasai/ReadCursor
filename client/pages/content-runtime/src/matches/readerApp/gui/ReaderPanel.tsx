@@ -79,6 +79,16 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
     [state],
   );
 
+  const statusChip = (
+    <span
+      className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusPill.cls}`}
+      title={`State: ${state}`}
+      aria-label={`Reader status: ${statusPill.label}`}>
+      <span className={`mr-2 inline-block h-2 w-2 rounded-full align-middle ${statusPill.dot}`} aria-hidden="true" />
+      {statusPill.label}
+    </span>
+  );
+
   const readRect = (): PanelRect | null => {
     const el = readerPanelRef.current;
     if (!el) return null;
@@ -195,14 +205,7 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
           className="flex min-w-0 flex-1 cursor-grab items-center gap-2 active:cursor-grabbing"
           aria-label="Drag minimized pill">
           <GripIcon className="h-7 w-7 shrink-0 text-slate-400 opacity-70 hover:opacity-90" />
-
-          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${statusPill.dot}`} aria-hidden="true" />
-          <span
-            className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusPill.cls}`}
-            title={`State: ${state}`}
-            aria-label={`Reader status: ${statusPill.label}`}>
-            {statusPill.label}
-          </span>
+          {statusChip}
         </div>
 
         {/* Buttons (non-draggable) */}
@@ -229,25 +232,12 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
   return (
     <PanelShell
       panelRef={readerPanelRef}
-      dragBar={<DragBar onMouseDownDrag={startDrag} onClose={onDestroy} onMinimize={minimize} />}
+      dragBar={
+        <DragBar onMouseDownDrag={startDrag} onClose={onDestroy} onMinimize={minimize} statusNode={statusChip} />
+      }
       resizeHandles={<ResizeHandles startResize={startResize} />}>
       <div className="p-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-sm font-semibold text-slate-900">Reader Panel</h2>
-            <p className="mt-0.5 text-xs text-slate-600">Floating Panel</p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div
-              className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium ${statusPill.cls}`}
-              title={`State: ${state}`}
-              aria-label={`Reader status: ${statusPill.label}`}>
-              <span className={`h-2 w-2 rounded-full ${statusPill.dot}`} />
-              {statusPill.label}
-            </div>
-          </div>
-        </div>
+        <h2 className="sr-only">Reader</h2>
 
         <div className="mt-3">
           <PlaybackControls
@@ -279,4 +269,3 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
     </PanelShell>
   );
 }
-

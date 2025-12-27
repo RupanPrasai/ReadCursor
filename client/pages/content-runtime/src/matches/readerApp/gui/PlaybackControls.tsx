@@ -1,3 +1,5 @@
+import { Button } from './Button';
+
 interface PlaybackControlsProps {
   onPrev: () => void;
   onPlay: () => void;
@@ -24,33 +26,28 @@ export function PlaybackControls({
   canStop,
   canNext,
 }: PlaybackControlsProps) {
-  const base =
-    'h-9 rounded-md px-3 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-50';
-
-  const neutral = `${base} border border-slate-300 bg-white text-slate-800 hover:bg-slate-100 active:bg-slate-200`;
-  const primary = `${base} bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-700`;
-
   return (
     <div className="flex flex-wrap gap-2">
-      <button className={neutral} onClick={onPrev} disabled={!canPrev} type="button" aria-label="Previous block">
+      <Button size="lg" variant="neutral" onClick={onPrev} disabled={!canPrev} aria-label="Previous block">
         ⏮ Prev
-      </button>
+      </Button>
 
-      <button className={primary} onClick={onPlay} disabled={!canPlay} type="button">
+      <Button size="lg" variant="primary" onClick={onPlay} disabled={!canPlay}>
         Play
-      </button>
+      </Button>
 
-      <button className={neutral} onClick={onPause} disabled={!canPause} type="button">
+      <Button size="lg" variant="neutral" onClick={onPause} disabled={!canPause}>
         Pause
-      </button>
+      </Button>
 
-      <button className={neutral} onClick={onStop} disabled={!canStop} type="button">
+      <Button size="lg" variant="neutral" onClick={onStop} disabled={!canStop}>
         Stop
-      </button>
+      </Button>
 
-      <button className={neutral} onClick={onNext} disabled={!canNext} type="button" aria-label="Next block">
+      <Button size="lg" variant="neutral" onClick={onNext} disabled={!canNext} aria-label="Next block">
         Next ⏭
-      </button>
+      </Button>
     </div>
   );
 }
+

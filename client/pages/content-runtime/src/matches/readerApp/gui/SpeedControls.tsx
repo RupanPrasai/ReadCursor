@@ -1,3 +1,5 @@
+import { ChipButton } from './ChipButton';
+
 interface SpeedControlsProps {
   wpm: number;
   wpmText: string;
@@ -38,7 +40,7 @@ export function SpeedControls({
             onKeyDown={event => {
               if (event.key === 'Enter') (event.currentTarget as HTMLInputElement).blur();
             }}
-            className="h-8 w-20 select-text rounded-md border border-slate-300 bg-white px-2 text-center text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+            className="h-9 w-20 select-text rounded-md border border-slate-300 bg-white px-2 text-center text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
             aria-label="WPM input"
           />
           <span className="text-xs text-slate-600">WPM</span>
@@ -60,13 +62,9 @@ export function SpeedControls({
 
       <div className="mt-3 flex flex-wrap gap-2">
         {presets.map(preset => (
-          <button
-            key={preset}
-            className="h-7 rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-800 hover:bg-slate-100 active:bg-slate-200"
-            onClick={() => onWpmChange(preset)}
-            type="button">
+          <ChipButton key={preset} size="lg" onClick={() => onWpmChange(preset)}>
             {preset}
-          </button>
+          </ChipButton>
         ))}
       </div>
     </div>

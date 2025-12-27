@@ -165,6 +165,19 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
     setWpm(clampInt(parsed, MIN_WPM, MAX_WPM));
   };
 
+  function GripIcon({ className }: { className?: string }) {
+    return (
+      <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+        <circle cx="9" cy="7" r="1.2" fill="currentColor" />
+        <circle cx="15" cy="7" r="1.2" fill="currentColor" />
+        <circle cx="9" cy="12" r="1.2" fill="currentColor" />
+        <circle cx="15" cy="12" r="1.2" fill="currentColor" />
+        <circle cx="9" cy="17" r="1.2" fill="currentColor" />
+        <circle cx="15" cy="17" r="1.2" fill="currentColor" />
+      </svg>
+    );
+  }
+
   // -----------------------------
   // Minimized pill render
   // -----------------------------
@@ -172,14 +185,18 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
     return (
       <div
         ref={readerPanelRef}
-        onMouseDown={startDrag}
-        onDoubleClick={restore}
-        title="Double-click to restore"
         className="fixed z-[999999] flex select-none items-center justify-between gap-2 rounded-full border border-slate-200 bg-white px-2.5 shadow-2xl"
         aria-label="Reader panel minimized">
-        <div className="flex min-w-0 items-center gap-2">
+        {/* Drag handle ONLY */}
+        <div
+          onMouseDown={startDrag}
+          onDoubleClick={restore}
+          title="Drag (double-click to restore)"
+          className="flex min-w-0 flex-1 cursor-grab items-center gap-2 active:cursor-grabbing"
+          aria-label="Drag minimized pill">
+          <GripIcon className="h-7 w-7 shrink-0 text-slate-400 opacity-70 hover:opacity-90" />
+
           <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${statusPill.dot}`} aria-hidden="true" />
-          <span className="truncate text-xs font-semibold text-slate-800">Reader</span>
           <span
             className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusPill.cls}`}
             title={`State: ${state}`}
@@ -188,6 +205,7 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
           </span>
         </div>
 
+        {/* Buttons (non-draggable) */}
         <div className="flex items-center gap-1">
           <IconButton ariaLabel="Restore reader panel" title="Restore" variant="success" onClick={restore}>
             <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">

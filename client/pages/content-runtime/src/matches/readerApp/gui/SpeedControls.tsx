@@ -24,29 +24,31 @@ export function SpeedControls({
   onCommitText,
 }: SpeedControlsProps) {
   return (
-    <div className="border-t border-slate-200 px-4 py-3">
-      <div className="flex items-center justify-between">
-        <div className="text-sm font-semibold text-slate-900">Speed</div>
+    <div className="border-t border-slate-200 px-6 py-4">
+      {/* header row */}
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="text-xl font-bold text-slate-900">Speed</div>
 
-        <div className="flex items-center gap-2">
+        <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1 shadow-sm">
           <input
             type="number"
             min={minWpm}
             max={maxWpm}
             step={stepWpm}
             value={wpmText}
-            onChange={event => onWpmTextChange(event.target.value)}
+            onChange={e => onWpmTextChange(e.target.value)}
             onBlur={onCommitText}
-            onKeyDown={event => {
-              if (event.key === 'Enter') (event.currentTarget as HTMLInputElement).blur();
+            onKeyDown={e => {
+              if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
             }}
-            className="h-9 w-20 select-text rounded-md border border-slate-300 bg-white px-2 text-center text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+            className="h-8 w-16 border-0 bg-transparent px-0 text-center text-sm font-semibold tabular-nums text-slate-900 outline-none focus:ring-0"
             aria-label="WPM input"
           />
-          <span className="text-xs text-slate-600">WPM</span>
+          <span className="text-xs font-semibold tracking-wide text-slate-500">WPM</span>
         </div>
       </div>
 
+      {/* slider */}
       <div className="mt-3">
         <input
           type="range"
@@ -60,6 +62,7 @@ export function SpeedControls({
         />
       </div>
 
+      {/* presets */}
       <div className="mt-3 flex flex-wrap gap-2">
         {presets.map(preset => (
           <ChipButton key={preset} size="lg" onClick={() => onWpmChange(preset)}>
@@ -70,3 +73,4 @@ export function SpeedControls({
     </div>
   );
 }
+

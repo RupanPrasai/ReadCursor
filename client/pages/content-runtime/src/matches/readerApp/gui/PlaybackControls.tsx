@@ -41,7 +41,7 @@ export function PlaybackControls({
     <div className="w-full overflow-x-auto">
       <div className="flex w-full justify-center">
         {/* outer chrome (soft track) */}
-        <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/70 p-1.5 shadow-sm backdrop-blur">
+        <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white p-2 shadow-md">
           {/* segment 1: prev / play-pause / next */}
           <div className="inline-flex overflow-hidden rounded-xl border border-slate-300 bg-white">
             <Button
@@ -51,7 +51,7 @@ export function PlaybackControls({
               disabled={!canPrev}
               aria-label="Previous"
               title="Previous"
-              className="rounded-none border-r border-slate-200 first:rounded-l-xl last:rounded-r-xl last:border-r-0">
+              className="rounded-none border-r border-slate-200 shadow-sm ring-1 ring-black/5">
               <SkipBack className="h-6 w-6" aria-hidden="true" />
             </Button>
 
@@ -77,7 +77,7 @@ export function PlaybackControls({
               disabled={!canNext}
               aria-label="Next"
               title="Next"
-              className="rounded-none border-r border-slate-200 first:rounded-l-xl last:rounded-r-xl last:border-r-0">
+              className="rounded-none shadow-sm ring-1 ring-black/5">
               <SkipForward className="h-6 w-6" aria-hidden="true" />
             </Button>
           </div>

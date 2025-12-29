@@ -74,3 +74,45 @@
   height: 12px;
   cursor: nw-resize;
 }
+
+/* Speed Slider */
+.rc-range {
+  --rc-accent: #0ea5e9;
+  /* change this hex to whatever */
+  --rc-track: #e2e8f0;
+  --rc-track-h: 6px;
+  --rc-thumb: 16px;
+
+  -webkit-appearance: none;
+  appearance: none;
+  height: var(--rc-thumb);
+  background: transparent;
+  cursor: pointer;
+}
+
+.rc-range:focus-visible {
+  outline: none;
+}
+
+/* WebKit (Chrome/Edge) */
+.rc-range::-webkit-slider-runnable-track {
+  height: var(--rc-track-h);
+  border-radius: 9999px;
+  background: linear-gradient(var(--rc-accent) 0 0) 0 / var(--rc-pct) 100% no-repeat var(--rc-track);
+}
+
+.rc-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--rc-thumb);
+  height: var(--rc-thumb);
+  border-radius: 9999px;
+  background: var(--rc-accent);
+  border: 2px solid #ffffff;
+  margin-top: calc((var(--rc-track-h) - var(--rc-thumb)) / 2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.rc-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px #0ea5e940, 0 1px 2px rgba(0, 0, 0, 0.12);
+}

@@ -49,18 +49,26 @@ export function SpeedControls({
       </div>
 
       {/* slider */}
-      <div className="mt-3">
-        <input
-          type="range"
-          min={minWpm}
-          max={maxWpm}
-          step={stepWpm}
-          value={wpm}
-          onChange={event => onWpmChange(Number(event.target.value))}
-          className="w-full"
-          aria-label="Words per minute"
-        />
-      </div>
+      {(() => {
+        const denom = Math.max(1, maxWpm - minWpm);
+        const pct = ((wpm - minWpm) / denom) * 100;
+
+        return (
+          <div className="mt-3 flex justify-center">
+            <input
+              type="range"
+              min={minWpm}
+              max={maxWpm}
+              step={stepWpm}
+              value={wpm}
+              onChange={event => onWpmChange(Number(event.target.value))}
+              className="rc-range w-[min(16rem,100%)]"
+              style={{ ['--rc-pct' as any]: `${pct}%` } as any}
+              aria-label="Words per minute"
+            />
+          </div>
+        );
+      })()}
 
       {/* presets */}
       <div className="mt-3 flex flex-wrap gap-2">
@@ -73,4 +81,3 @@ export function SpeedControls({
     </div>
   );
 }
-

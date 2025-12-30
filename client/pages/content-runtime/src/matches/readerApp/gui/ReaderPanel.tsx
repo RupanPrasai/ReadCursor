@@ -18,6 +18,8 @@ const MAX_WPM = 350;
 const STEP_WPM = 5;
 const WPM_PRESETS = [100, 125, 150, 175, 200, 225];
 
+const RESIZE_ENABLED = false;
+
 // Pill sizing (minimized mode)
 const PILL_W = 220;
 const PILL_H = 44;
@@ -54,16 +56,29 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
   useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const status = controller.getStatus();
 
-  const { readerPanelRef, startDrag, startResize } = useDraggableResizable({
-    minWidth: 300,
-    maxWidth: 800,
-    minHeight: 400,
-    maxHeight: 800,
-  });
-
   const [mode, setMode] = useState<PanelMode>('open');
   const [savedRect, setSavedRect] = useState<PanelRect | null>(null);
   const [pendingStyle, setPendingStyle] = useState<PendingStyle>(null);
+  const [lockedSize, setLockedSize] = useState<{ w: number; h: number } | null>(null);
+
+  const { readerPanelRef, startDrag, startResize } = useDraggableResizable({
+    minWidth: RESIZE_ENABLED ? 300 : (lockedSize?.w ?? 300),
+    maxWidth: RESIZE_ENABLED ? 800 : (lockedSize?.w ?? 300),
+    minHeight: RESIZE_ENABLED ? 400 : (lockedSize?.h ?? 400),
+    maxHeight: RESIZE_ENABLED ? 800 : (lockedSize?.h ?? 400),
+  });
+
+  useLayoutEffect(() => {
+    if (RESIZE_ENABLED) return;
+    if (mode !== 'open') return;
+    if (lockedSize) return;
+
+    const el = readerPanelRef.current;
+    if (!el) return;
+
+    const r = el.getBoundingClientRect();
+    setLockedSize({ w: Math.round(r.width), h: Math.round(r.height) });
+  }, [mode, lockedSize, readerPanelRef]);
 
   const state = String(status.state ?? 'UNKNOWN');
 
@@ -235,7 +250,7 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
       dragBar={
         <DragBar onMouseDownDrag={startDrag} onClose={onDestroy} onMinimize={minimize} statusNode={statusChip} />
       }
-      resizeHandles={<ResizeHandles startResize={startResize} />}>
+      resizeHandles={RESIZE_ENABLED ? <ResizeHandles startResize={startResize} /> : null}>
       <div className="p-4">
         <h2 className="sr-only">Reader</h2>
 

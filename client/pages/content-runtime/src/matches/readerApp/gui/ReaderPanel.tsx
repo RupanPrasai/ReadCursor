@@ -5,7 +5,7 @@ import { PlaybackControls } from './PlaybackControls';
 import { ResizeHandles } from './ResizeHandles';
 import { SpeedControls } from './SpeedControls';
 import { useDraggableResizable } from '../hooks/useDraggableResizable';
-import { useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReaderController } from '../readerEngine/controller';
 
 interface ReaderPanelProps {
@@ -40,10 +40,17 @@ function clampInt(raw: number, min: number, max: number) {
   return Math.max(min, Math.min(max, num));
 }
 
-function clampRectToViewport(rect: PanelRect) {
+function clampRectToViewport(rect: PanelRect, scale: number) {
   const margin = 8;
-  const maxLeft = Math.max(margin, window.innerWidth - rect.width - margin);
-  const maxTop = Math.max(margin, window.innerHeight - rect.height - margin);
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // Visually scaled size
+  const sw = rect.width * scale;
+  const sh = rect.height * scale;
+
+  const maxLeft = Math.max(margin, vw - sw - margin);
+  const maxTop = Math.max(margin, vh - sh - margin);
 
   return {
     ...rect,
@@ -59,26 +66,104 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
   const [mode, setMode] = useState<PanelMode>('open');
   const [savedRect, setSavedRect] = useState<PanelRect | null>(null);
   const [pendingStyle, setPendingStyle] = useState<PendingStyle>(null);
-  const [lockedSize, setLockedSize] = useState<{ w: number; h: number } | null>(null);
+
+  // ---- inverse-DPR scaling to neutralize browser zoom "getting huge"
+  const baseDprRef = useRef<number | null>(null);
+  const [panelScale, setPanelScale] = useState(1);
+
+  const scaleRef = useRef(1);
+  const effectiveScale = mode === 'open' ? panelScale : 1;
+
+  useLayoutEffect(() => {
+    scaleRef.current = effectiveScale;
+  }, [effectiveScale]);
 
   const { readerPanelRef, startDrag, startResize } = useDraggableResizable({
-    minWidth: RESIZE_ENABLED ? 300 : (lockedSize?.w ?? 300),
-    maxWidth: RESIZE_ENABLED ? 800 : (lockedSize?.w ?? 300),
-    minHeight: RESIZE_ENABLED ? 400 : (lockedSize?.h ?? 400),
-    maxHeight: RESIZE_ENABLED ? 800 : (lockedSize?.h ?? 400),
+    minWidth: 300,
+    maxWidth: 800,
+    minHeight: 400,
+    maxHeight: 800,
   });
 
   useLayoutEffect(() => {
-    if (RESIZE_ENABLED) return;
-    if (mode !== 'open') return;
-    if (lockedSize) return;
+    if (baseDprRef.current == null) baseDprRef.current = window.devicePixelRatio || 1;
 
+    const update = () => {
+      const base = baseDprRef.current || 1;
+      const cur = window.devicePixelRatio || 1;
+
+      // zoom-in => cur increases => scale < 1
+      let s = base / cur;
+
+      // Never grow on zoom-out; only shrink on zoom-in.
+      s = Math.min(1, Math.max(0.55, s));
+
+      setPanelScale(s);
+    };
+
+    update();
+    window.addEventListener('resize', update);
+    window.visualViewport?.addEventListener('resize', update);
+
+    return () => {
+      window.removeEventListener('resize', update);
+      window.visualViewport?.removeEventListener('resize', update);
+    };
+  }, []);
+
+  // Apply scale (only affects open mode; pill stays normal)
+  useLayoutEffect(() => {
     const el = readerPanelRef.current;
     if (!el) return;
 
+    el.style.transformOrigin = 'top left';
+
+    if (mode === 'open' && panelScale !== 1) {
+      el.style.transform = `scale(${panelScale})`;
+    } else {
+      el.style.transform = '';
+    }
+  }, [mode, panelScale, readerPanelRef]);
+
+  const readRect = (): PanelRect | null => {
+    const el = readerPanelRef.current;
+    if (!el) return null;
+
     const r = el.getBoundingClientRect();
-    setLockedSize({ w: Math.round(r.width), h: Math.round(r.height) });
-  }, [mode, lockedSize, readerPanelRef]);
+    const s = scaleRef.current || 1;
+
+    // left/top align with transform-origin top-left; unscale width/height for stored rects
+    return {
+      left: Math.round(r.left),
+      top: Math.round(r.top),
+      width: Math.round(r.width / s),
+      height: Math.round(r.height / s),
+    };
+  };
+
+  const applyRect = (rect: PanelRect) => {
+    const el = readerPanelRef.current;
+    if (!el) return;
+
+    const s = scaleRef.current || 1;
+    const clamped = clampRectToViewport(rect, s);
+
+    el.style.left = `${clamped.left}px`;
+    el.style.top = `${clamped.top}px`;
+    el.style.width = `${clamped.width}px`;
+    el.style.height = `${clamped.height}px`;
+  };
+
+  // Re-clamp position when zoom scale changes (prevents drifting off-screen)
+  useLayoutEffect(() => {
+    if (mode !== 'open') return;
+
+    const cur = readRect();
+    if (!cur) return;
+
+    applyRect(cur);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panelScale, mode]);
 
   const state = String(status.state ?? 'UNKNOWN');
 
@@ -104,30 +189,6 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
     </span>
   );
 
-  const readRect = (): PanelRect | null => {
-    const el = readerPanelRef.current;
-    if (!el) return null;
-
-    const r = el.getBoundingClientRect();
-    return {
-      left: Math.round(r.left),
-      top: Math.round(r.top),
-      width: Math.round(r.width),
-      height: Math.round(r.height),
-    };
-  };
-
-  const applyRect = (rect: PanelRect) => {
-    const el = readerPanelRef.current;
-    if (!el) return;
-
-    const clamped = clampRectToViewport(rect);
-    el.style.left = `${clamped.left}px`;
-    el.style.top = `${clamped.top}px`;
-    el.style.width = `${clamped.width}px`;
-    el.style.height = `${clamped.height}px`;
-  };
-
   const clearInlineRect = () => {
     const el = readerPanelRef.current;
     if (!el) return;
@@ -144,6 +205,7 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
     else clearInlineRect();
 
     setPendingStyle(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingStyle]);
 
   const minimize = () => {
@@ -156,17 +218,13 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
   };
 
   const restore = () => {
-    // While still minimized, grab the pill’s current position.
-    const pill = readRect(); // pill width/height will be PILL_W/PILL_H
-
+    const pill = readRect(); // pill position
     const base = savedRect ?? { left: 96, top: 96, width: 300, height: 400 };
 
-    const next: PanelRect = pill
-      ? { ...base, left: pill.left, top: pill.top } // keep open size, move to pill location
-      : base;
+    const next: PanelRect = pill ? { ...base, left: pill.left, top: pill.top } : base;
 
     setMode('open');
-    setSavedRect(next); // so future minimize/restore uses the updated open position
+    setSavedRect(next);
     setPendingStyle({ kind: 'apply', rect: next });
   };
 

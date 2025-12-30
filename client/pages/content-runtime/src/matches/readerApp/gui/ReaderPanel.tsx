@@ -14,9 +14,9 @@ interface ReaderPanelProps {
 }
 
 const MIN_WPM = 50;
-const MAX_WPM = 450;
-const STEP_WPM = 10;
-const WPM_PRESETS = [100, 150, 200, 250, 300];
+const MAX_WPM = 350;
+const STEP_WPM = 5;
+const WPM_PRESETS = [100, 125, 150, 175, 200, 225];
 
 // Pill sizing (minimized mode)
 const PILL_W = 220;

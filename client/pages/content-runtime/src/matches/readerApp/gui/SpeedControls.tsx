@@ -71,9 +71,14 @@ export function SpeedControls({
       })()}
 
       {/* presets */}
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-4 grid w-[min(19rem,100%)] grid-cols-3 gap-3">
         {presets.map(preset => (
-          <ChipButton key={preset} size="lg" onClick={() => onWpmChange(preset)}>
+          <ChipButton
+            key={preset}
+            size="lg"
+            selected={preset === wpm}
+            className="w-full"
+            onClick={() => onWpmChange(preset)}>
             {preset}
           </ChipButton>
         ))}

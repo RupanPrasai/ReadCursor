@@ -80,8 +80,8 @@
   --rc-accent: #0ea5e9;
   /* change this hex to whatever */
   --rc-track: #e2e8f0;
-  --rc-track-h: 6px;
-  --rc-thumb: 16px;
+  --rc-track-h: 16px;
+  --rc-thumb: 22px;
 
   -webkit-appearance: none;
   appearance: none;

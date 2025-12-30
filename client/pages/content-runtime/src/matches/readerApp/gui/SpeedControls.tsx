@@ -62,7 +62,7 @@ export function SpeedControls({
               step={stepWpm}
               value={wpm}
               onChange={event => onWpmChange(Number(event.target.value))}
-              className="rc-range w-[min(16rem,100%)]"
+              className="rc-range w-[min(11.5rem,100%)]"
               style={{ ['--rc-pct' as any]: `${pct}%` } as any}
               aria-label="Words per minute"
             />
@@ -81,3 +81,4 @@ export function SpeedControls({
     </div>
   );
 }
+

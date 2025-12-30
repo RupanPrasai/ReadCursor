@@ -54,7 +54,7 @@ export function SpeedControls({
         const pct = ((wpm - minWpm) / denom) * 100;
 
         return (
-          <div className="mt-3 flex justify-center">
+          <div className="mb-4 mt-4 flex justify-center">
             <input
               type="range"
               min={minWpm}
@@ -81,4 +81,3 @@ export function SpeedControls({
     </div>
   );
 }
-

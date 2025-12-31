@@ -1,24 +1,28 @@
 import '@src/Options.css';
-import { t } from '@extension/i18n';
-import { PROJECT_URL_OBJECT, useStorage, withErrorBoundary, withSuspense } from '@extension/shared';
-import { exampleThemeStorage } from '@extension/storage';
-import { cn, ErrorDisplay, LoadingSpinner, ToggleButton } from '@extension/ui';
+import { withErrorBoundary, withSuspense } from '@extension/shared';
+import { ErrorDisplay, LoadingSpinner } from '@extension/ui';
 
 const Options = () => {
-  const { isLight } = useStorage(exampleThemeStorage);
-  const logo = isLight ? 'options/logo_horizontal.svg' : 'options/logo_horizontal_dark.svg';
-
-  const goGithubSite = () => chrome.tabs.create(PROJECT_URL_OBJECT);
+  // Keep it simple for v1. No theme toggle, no links, no storage.
+  const logo = 'options/logo_horizontal.svg';
 
   return (
-    <div className={cn('App', isLight ? 'bg-slate-50 text-gray-900' : 'bg-gray-800 text-gray-100')}>
-      <button onClick={goGithubSite}>
-        <img src={chrome.runtime.getURL(logo)} className="App-logo" alt="logo" />
-      </button>
-      <p>
-        Edit <code>pages/options/src/Options.tsx</code>
-      </p>
-      <ToggleButton onClick={exampleThemeStorage.toggle}>{t('toggleTheme')}</ToggleButton>
+    <div className="options-root">
+      <main className="card" role="main" aria-label="Read Cursor Options">
+        <div className="logo-block" aria-hidden="true">
+          <img className="logo" src={chrome.runtime.getURL(logo)} alt="" />
+        </div>
+
+        <h1 className="title">Read Cursor</h1>
+
+        <p className="subtitle">Options are coming in a future release. v1 ships with sensible defaults.</p>
+
+        <button className="cta" type="button" disabled>
+          Options coming soon
+        </button>
+
+        <p className="hint">Nothing to configure yet.</p>
+      </main>
     </div>
   );
 };

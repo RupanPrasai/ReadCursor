@@ -49,15 +49,12 @@ const Popup = () => {
   return (
     <main className={cn('popup-root', isLight ? 'theme-light' : 'theme-dark')} aria-label="Extension popup">
       <div className="card">
-        <header className="header">
-          <div className="brand" aria-label="Read Cursor">
-            <img src={chrome.runtime.getURL(logo)} className="brandLogo" alt="Read Cursor logo" />
+        <header className="header headerHero">
+          <div className="brandHero" aria-label="Read Cursor">
+            <img src={chrome.runtime.getURL(logo)} className="brandLogoHero" alt="Read Cursor logo" />
           </div>
 
-          <div className="brandText">
-            <div className="title">Read Cursor</div>
-            <div className="subtitle">Open the Read Cursor Extension</div>
-          </div>
+          <div className="titleHero">Read Cursor</div>
         </header>
 
         <section className="content">
@@ -67,8 +64,9 @@ const Popup = () => {
             onClick={injectContentScript}
             disabled={injecting}
             aria-busy={injecting}>
-            {injecting ? 'Opening…' : 'Open extension'}
+            {injecting ? 'Opening…' : 'Open Read Cursor'}
           </button>
+          <div className="hint">Opens on the current tab</div>
 
           <div className="footerRow">
             <div className="toggleHidden" aria-hidden="true">

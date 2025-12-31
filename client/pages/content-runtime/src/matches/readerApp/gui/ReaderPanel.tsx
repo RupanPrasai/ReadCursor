@@ -70,13 +70,7 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
   // ---- inverse-DPR scaling to neutralize browser zoom "getting huge"
   const baseDprRef = useRef<number | null>(null);
   const [panelScale, setPanelScale] = useState(1);
-
-  const scaleRef = useRef(1);
-  const effectiveScale = mode === 'open' ? panelScale : 1;
-
-  useLayoutEffect(() => {
-    scaleRef.current = effectiveScale;
-  }, [effectiveScale]);
+  const prevScaleRef = useRef(1);
 
   const { readerPanelRef, startDrag, startResize } = useDraggableResizable({
     minWidth: 300,
@@ -95,8 +89,8 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
       // zoom-in => cur increases => scale < 1
       let s = base / cur;
 
-      // Never grow on zoom-out; only shrink on zoom-in.
-      s = Math.min(1, Math.max(0.55, s));
+      // Compensate both zoom-in and zoom-out (keeps physical size consistent)
+      s = Math.min(1.4, Math.max(0.35, s));
 
       setPanelScale(s);
     };
@@ -116,26 +110,48 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
     const el = readerPanelRef.current;
     if (!el) return;
 
-    el.style.transformOrigin = 'top left';
+    const next = mode === 'open' ? panelScale : 1; // pill stays unscaled
+    const prev = prevScaleRef.current || 1;
 
-    if (mode === 'open' && panelScale !== 1) {
-      el.style.transform = `scale(${panelScale})`;
-    } else {
-      el.style.transform = '';
-    }
-  }, [mode, panelScale, readerPanelRef]);
+    if (prev === next) return;
+
+    // Current visual rect under PREV scale
+    const r = el.getBoundingClientRect();
+    const unscaledW = Math.round(r.width / prev);
+    const unscaledH = Math.round(r.height / prev);
+
+    // Adjust so physical position doesn’t drift when scale changes
+    const leftUnscaled = r.left / prev;
+    const topUnscaled = r.top / prev;
+
+    const nextLeft = leftUnscaled * next;
+    const nextTop = topUnscaled * next;
+
+    // Apply scale
+    el.style.transformOrigin = 'top left';
+    el.style.transform = next === 1 ? '' : `scale(${next})`;
+
+    // Clamp and apply rect
+    const clamped = clampRectToViewport({ left: nextLeft, top: nextTop, width: unscaledW, height: unscaledH }, next);
+
+    el.style.left = `${clamped.left}px`;
+    el.style.top = `${clamped.top}px`;
+    el.style.width = `${clamped.width}px`;
+    el.style.height = `${clamped.height}px`;
+
+    prevScaleRef.current = next;
+  }, [mode, panelScale]);
 
   const readRect = (): PanelRect | null => {
     const el = readerPanelRef.current;
     if (!el) return null;
 
     const r = el.getBoundingClientRect();
-    const s = scaleRef.current || 1;
+    const s = prevScaleRef.current || 1;
 
-    // left/top align with transform-origin top-left; unscale width/height for stored rects
     return {
-      left: Math.round(r.left),
-      top: Math.round(r.top),
+      left: Math.round(r.left / s),
+      top: Math.round(r.top / s),
       width: Math.round(r.width / s),
       height: Math.round(r.height / s),
     };
@@ -145,25 +161,23 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
     const el = readerPanelRef.current;
     if (!el) return;
 
-    const s = scaleRef.current || 1;
-    const clamped = clampRectToViewport(rect, s);
+    const s = prevScaleRef.current || 1;
+
+    // Convert unscaled -> CSS left/top for current scale
+    const cssRect = {
+      left: rect.left * s,
+      top: rect.top * s,
+      width: rect.width,
+      height: rect.height,
+    };
+
+    const clamped = clampRectToViewport(cssRect, s);
 
     el.style.left = `${clamped.left}px`;
     el.style.top = `${clamped.top}px`;
     el.style.width = `${clamped.width}px`;
     el.style.height = `${clamped.height}px`;
   };
-
-  // Re-clamp position when zoom scale changes (prevents drifting off-screen)
-  useLayoutEffect(() => {
-    if (mode !== 'open') return;
-
-    const cur = readRect();
-    if (!cur) return;
-
-    applyRect(cur);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [panelScale, mode]);
 
   const state = String(status.state ?? 'UNKNOWN');
 

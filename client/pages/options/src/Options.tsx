@@ -3,12 +3,11 @@ import { withErrorBoundary, withSuspense } from '@extension/shared';
 import { ErrorDisplay, LoadingSpinner } from '@extension/ui';
 
 const Options = () => {
-  // Keep it simple for v1. No theme toggle, no links, no storage.
   const logo = 'options/logo_horizontal.svg';
 
   return (
     <div className="options-root">
-      <main className="card" role="main" aria-label="Read Cursor Options">
+      <main className="options-page" role="main" aria-label="Read Cursor Options">
         <div className="logo-block" aria-hidden="true">
           <img className="logo" src={chrome.runtime.getURL(logo)} alt="" />
         </div>

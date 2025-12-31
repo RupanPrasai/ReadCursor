@@ -1,12 +1,9 @@
 :root {
-  --bg: #f8fafc;
-  --card: #ffffff;
+  --page: #fbfcfe;
   --text: #0f172a;
   --muted: #64748b;
   --border: rgba(15, 23, 42, 0.10);
-  --shadow: 0 18px 50px rgba(2, 6, 23, 0.10), 0 3px 10px rgba(2, 6, 23, 0.06);
   --btn: #0b1629;
-  --btn-hover: #0a1324;
 }
 
 html,
@@ -16,15 +13,19 @@ body,
   margin: 0;
 }
 
+html,
+body {
+  background: var(--page);
+}
+
 #app-container {
   width: 100%;
 }
 
-/* FULL SCREEN PAGE */
 .options-root {
   min-height: 100%;
   width: 100%;
-  background: var(--bg);
+  background: var(--page);
   color: var(--text);
   display: flex;
   align-items: center;

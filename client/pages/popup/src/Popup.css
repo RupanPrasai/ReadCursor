@@ -114,8 +114,13 @@
   transform: none;
 }
 
+.toggleHidden {
+  display: none;
+}
+
 .toggleDisabled {
-  opacity: 0.55;
+  opacity: 0.5;
+  filter: grayscale(0.2);
   cursor: not-allowed;
 }
 

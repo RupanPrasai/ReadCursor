@@ -67,11 +67,11 @@ const Popup = () => {
             onClick={injectContentScript}
             disabled={injecting}
             aria-busy={injecting}>
-            {injecting ? 'Opening…' : t('injectButton')}
+            {injecting ? 'Opening…' : 'Open extension'}
           </button>
 
           <div className="footerRow">
-            <div className="toggleDisabled" title="Coming soon" aria-label="Theme toggle disabled">
+            <div className="toggleHidden" aria-hidden="true">
               <ToggleButton className="secondaryBtn" disabled>
                 {t('toggleTheme')}
               </ToggleButton>

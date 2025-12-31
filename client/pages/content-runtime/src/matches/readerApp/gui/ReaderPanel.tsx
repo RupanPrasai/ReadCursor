@@ -106,13 +106,13 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
   }, []);
 
   // Apply scale (only affects open mode; pill stays normal)
+  // Apply scale (open + minimized pill)
   useLayoutEffect(() => {
     const el = readerPanelRef.current;
     if (!el) return;
 
-    const next = mode === 'open' ? panelScale : 1; // pill stays unscaled
+    const next = panelScale; // ✅ scale both modes
     const prev = prevScaleRef.current || 1;
-
     if (prev === next) return;
 
     // Current visual rect under PREV scale
@@ -120,18 +120,16 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
     const unscaledW = Math.round(r.width / prev);
     const unscaledH = Math.round(r.height / prev);
 
-    // Adjust so physical position doesn’t drift when scale changes
+    // Keep physical position stable across scale changes
     const leftUnscaled = r.left / prev;
     const topUnscaled = r.top / prev;
 
     const nextLeft = leftUnscaled * next;
     const nextTop = topUnscaled * next;
 
-    // Apply scale
     el.style.transformOrigin = 'top left';
     el.style.transform = next === 1 ? '' : `scale(${next})`;
 
-    // Clamp and apply rect
     const clamped = clampRectToViewport({ left: nextLeft, top: nextTop, width: unscaledW, height: unscaledH }, next);
 
     el.style.left = `${clamped.left}px`;
@@ -140,7 +138,7 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
     el.style.height = `${clamped.height}px`;
 
     prevScaleRef.current = next;
-  }, [mode, panelScale]);
+  }, [panelScale]);
 
   const readRect = (): PanelRect | null => {
     const el = readerPanelRef.current;

@@ -1,17 +1,17 @@
 {
   "extensionDescription": {
     "description": "Extension description",
-    "message": "Chrome extension boilerplate developed with Vite, React and Typescript"
+    "message": "A Chrome extension that overlays a reading cursor on any webpage, highlighting text and auto-advancing at a configurable WPM via a draggable control panel."
   },
   "extensionName": {
     "description": "Extension name",
-    "message": "Chrome extension boilerplate"
+    "message": "ReadCursor"
   },
   "toggleTheme": {
     "message": "Toggle theme"
   },
   "injectButton": {
-    "message": "Click to inject Content Scripts"
+    "message": "Open ReadCursor"
   },
   "greeting": {
     "description": "Greeting message",

@@ -1,7 +1,24 @@
 {
-  "name": "chrome-extension-boilerplate-react-vite",
-  "version": "0.5.0",
-  "description": "chrome extension boilerplate",
+  "name": "readcursor",
+  "version": "1.0.0",
+  "description": "A Chrome extension that overlays a reading cursor on any webpage, highlighting text and auto-advancing at a configurable WPM via a draggable control panel.",
+  "author": "Rupan Prasai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RupanPrasai/ReadCursor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/RupanPrasai/ReadCursor/issues"
+  },
+  "homepage": "https://github.com/RupanPrasai/ReadCursor#readme",
+  "keywords": [
+    "chrome-extension",
+    "reading",
+    "highlight",
+    "wpm",
+    "productivity",
+    "accessibility"
+  ],
   "license": "MIT",
   "private": true,
   "sideEffects": false,

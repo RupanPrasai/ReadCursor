@@ -39,10 +39,10 @@ const manifest = {
   },
   action: {
     default_popup: 'popup/index.html',
-    default_icon: 'icon-34.png',
+    default_icon: 'icon32.png',
   },
   icons: {
-    '128': 'icon-128.png',
+    '128': 'icon128.png',
   },
   content_scripts: [
     {
@@ -53,7 +53,7 @@ const manifest = {
   devtools_page: 'devtools/index.html',
   web_accessible_resources: [
     {
-      resources: ['*.js', '*.css', '*.svg', 'icon-128.png', 'icon-34.png'],
+      resources: ['*.js', '*.css', '*.svg', 'icon128.png', 'icon32.png'],
       matches: ['*://*/*'],
     },
   ],

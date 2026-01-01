@@ -78,7 +78,7 @@ export const MODULE_CONFIG = {
   popup: {
     action: {
       default_popup: 'popup/index.html',
-      default_icon: 'icon-34.png',
+      default_icon: 'icon32.png',
     },
   },
   devtools: {

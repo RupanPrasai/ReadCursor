@@ -14,7 +14,7 @@ const notificationOptions = {
 
 const Popup = () => {
   const { isLight } = useStorage(exampleThemeStorage);
-  const logo = isLight ? 'popup/logo_vertical.svg' : 'popup/logo_vertical_dark.svg';
+  const logo = 'popup/iconbase.png';
 
   const [injecting, setInjecting] = useState(false);
 

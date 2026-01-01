@@ -3,7 +3,7 @@ import { withErrorBoundary, withSuspense } from '@extension/shared';
 import { ErrorDisplay, LoadingSpinner } from '@extension/ui';
 
 const Options = () => {
-  const logo = 'options/logo_horizontal.svg';
+  const logo = 'options/iconbase.png';
 
   return (
     <div className="options-root">
@@ -27,3 +27,4 @@ const Options = () => {
 };
 
 export default withErrorBoundary(withSuspense(Options, <LoadingSpinner />), ErrorDisplay);
+

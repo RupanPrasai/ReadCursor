@@ -1,7 +1,7 @@
 {
   "extensionDescription": {
     "description": "Extension description",
-    "message": "A Chrome extension that overlays a reading cursor on any webpage, highlighting text and auto-advancing at a configurable WPM via a draggable control panel."
+    "message": "Overlay a reading cursor on webpages; highlight text and auto-advance at a configurable WPM with a draggable panel."
   },
   "extensionName": {
     "description": "Extension name",

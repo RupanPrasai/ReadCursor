@@ -59,7 +59,7 @@ It works directly on live page content and provides a lightweight, draggable con
 2. Open ReadCursor from the browser toolbar.
 3. Start playback to activate the reading cursor.
 4. Adjust WPM, pause, or skip using the control panel.
-5. Right click on any word on the webpage to "Start from here".
+5. Right click on any word on the webpage to "Start reading from here".
 
 ## Tech Stack
 - React

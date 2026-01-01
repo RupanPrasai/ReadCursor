@@ -46,7 +46,7 @@ It works directly on live page content and provides a lightweight, draggable con
     ```
 
 4. Open Chrome and navigate to:
-    ```bash
+    ```txt
         chrome://extensions
     ```
 

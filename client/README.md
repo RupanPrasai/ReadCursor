@@ -52,12 +52,12 @@ It works directly on live page content and provides a lightweight, draggable con
 
 5. Enable **Developer mode** (top right).
 
-6. Click **Load unpacked** and select the generated ```dist``` directory.
+6. Click **Load unpacked** and select the generated `dist` directory.
 
 ## Usage
 1. Navigate to a webpage with readable text.
 2. Open ReadCursor from the browser toolbar.
-3. Stary playback to activate the reading cursor.
+3. Start playback to activate the reading cursor.
 4. Adjust WPM, pause, or skip using the control panel.
 5. Right click on any word on the webpage to "Start from here".
 
@@ -71,7 +71,7 @@ It works directly on live page content and provides a lightweight, draggable con
 
 ## Status
 - **Version**: 1.0.0
-- Acitvely developed
+- Actively developed
 - Initial public release
 
 ## License

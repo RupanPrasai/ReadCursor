@@ -14,7 +14,9 @@ type Singleton = {
 
 let activeReactRoot: Root | null = null;
 
-// ---------- START FROM SELECTION CONTEXT ----------
+// START FROM SELECTION CONTEXT
+//
+//
 let lastCtx: {
   ts: number;
   clientX: number;
@@ -27,7 +29,9 @@ let lastCtx: {
   pageY: number;
 } | null = null;
 
-// ---------- GLOBAL LISTENER MANAGEMENT ----------
+// GLOBAL LISTENER MANAGEMENT
+//
+//
 let listenersAttached = false;
 
 const onContextMenu = (event: Event) => {
@@ -43,12 +47,14 @@ const onContextMenu = (event: Event) => {
       : (range.startContainer.parentElement as Element | null)
     : null;
 
-  // ✅ Prefer the block you're actually highlighting (fixes <strong> selections)
+  //  Prefer the block that's being highlighted (fixes <strong> node selections)
+  //
   const blockEl =
     (startEl?.closest?.('.rc-highlightable[data-rcid]') as HTMLElement | null) ??
     (target?.closest?.('.rc-highlightable[data-rcid]') as HTMLElement | null);
 
-  // Fallback if we right-click outside highlightable blocks
+  // Fallback if right-click outside highlightable blocks
+  //
   const anyRcidEl =
     (startEl?.closest?.('[data-rcid]') as HTMLElement | null) ??
     (target?.closest?.('[data-rcid]') as HTMLElement | null);
@@ -58,6 +64,7 @@ const onContextMenu = (event: Event) => {
 
   // Selection start offset within rcidElement (block if available)
   // Selection start offset within rcidElement (block if available)
+  //
   let selStartChar: number | null = null;
   if (rcidElement && sel && range && !sel.isCollapsed) {
     try {
@@ -65,8 +72,7 @@ const onContextMenu = (event: Event) => {
       pre.selectNodeContents(rcidElement);
       pre.setEnd(range.startContainer, range.startOffset);
 
-      // IMPORTANT:
-      // Use DOM textContent length (raw text nodes), NOT Range.toString(),
+      // Use DOM textContent length (raw text nodes), Not Range.toString(),
       // so it matches ReadableWords.ts globalTextOffset semantics.
       const frag = pre.cloneContents();
       selStartChar = frag.textContent?.length ?? 0;
@@ -76,6 +82,7 @@ const onContextMenu = (event: Event) => {
   }
 
   // Selection rect center point
+  //
   let selClientX: number | null = null;
   let selClientY: number | null = null;
   if (range) {
@@ -135,7 +142,9 @@ function detachGlobalListeners() {
   console.log('[ReadCursor] Global listeners detached');
 }
 
-// ---------- LIFECYCLE ----------
+// LIFECYCLE
+//
+//
 function destroyReaderPanelInstance() {
   try {
     if (activeReactRoot) {
@@ -153,7 +162,8 @@ function destroyReaderPanelInstance() {
       delete (window as any)[GLOBAL_KEY];
     }
 
-    // Important: remove global listeners so re-injection doesn't stack handlers
+    // Remove global listeners so re-injection doesn't stack handlers
+    //
     detachGlobalListeners();
 
     console.log('[ReadCursor] Reader Panel instance destroyed.');
@@ -196,6 +206,7 @@ function initializeReaderPanel(): boolean {
 }
 
 // Dispose any prior singleton first
+//
 const existingSingleton = (window as any)[GLOBAL_KEY] as Singleton | undefined;
 if (existingSingleton?.dispose) {
   try {

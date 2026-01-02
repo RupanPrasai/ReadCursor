@@ -27,7 +27,7 @@ export function PlaybackControls({
   canStop,
   canNext,
 }: PlaybackControlsProps) {
-  const showingPause = canPause; // if pause is enabled, you're "playing" state in practice
+  const showingPause = canPause;
   const onToggle = showingPause ? onPause : onPlay;
   const canToggle = showingPause ? canPause : canPlay;
 

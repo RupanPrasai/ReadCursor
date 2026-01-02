@@ -1,5 +1,5 @@
 export function* walkTextNodes(root: Element): Generator<Text> {
-  // IMPORTANT: include *all* text nodes (including whitespace-only),
+  //  Including all text nodes (including whitespace-only),
   // because selStartChar is computed via Range.toString().length over the whole element.
   // If we skip whitespace-only nodes here, global offsets will drift.
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -21,10 +21,6 @@ export function getWordBoundaries(text: string): Array<[number, number]> {
   return boundaries;
 }
 
-/**
- * Kept for compatibility (some code may still import it).
- * Note: extraction now uses client-space rects + local offsets.
- */
 export function toAbsoluteRect(rect: DOMRect): DOMRect {
   return {
     x: rect.x + window.scrollX,
@@ -59,7 +55,7 @@ export function extractWordsFromNode(element: Element) {
   const rcid = Number(element.getAttribute('data-rcid'));
   const words: any[] = [];
 
-  // CLIENT-space rects
+  // Client-space rects
   const blockRectRaw = element.getBoundingClientRect();
   const blockRect = rectToPlain(blockRectRaw);
 
@@ -70,14 +66,14 @@ export function extractWordsFromNode(element: Element) {
     height: blockRect.height,
   };
 
-  // Global char offset across *all* descendant text nodes of this element.
-  // This is what makes selStartChar mapping stable under zoom/resize/reflow.
+  // Global char offset across all descendant text nodes of this element.
+  // selStartChar mapping stable under zoom/resize/reflow.
   let globalTextOffset = 0;
 
   for (const textNode of walkTextNodes(element)) {
     const text = textNode.nodeValue ?? '';
 
-    // Compute word boundaries within THIS text node (node-local)
+    // Compute word boundaries in text node (node-local)
     const boundaries = getWordBoundaries(text);
 
     for (const [startLocal, endLocal] of boundaries) {
@@ -97,7 +93,7 @@ export function extractWordsFromNode(element: Element) {
         height: rect.height,
       };
 
-      // Convert node-local offsets -> element-global offsets
+      // Convert node-local offsets to element-global offsets
       const start = globalTextOffset + startLocal;
       const end = globalTextOffset + endLocal;
 
@@ -111,7 +107,7 @@ export function extractWordsFromNode(element: Element) {
         blockLocalRect,
         localRect,
 
-        // NOW: element-global offsets (not per text node)
+        // Element-global offsets
         start,
         end,
 
@@ -120,7 +116,7 @@ export function extractWordsFromNode(element: Element) {
     }
 
     // Always advance by full node length (including whitespace),
-    // so offsets match Range.toString() length semantics.
+    // So that offsets match Range.toString() length semantics.
     globalTextOffset += text.length;
   }
 

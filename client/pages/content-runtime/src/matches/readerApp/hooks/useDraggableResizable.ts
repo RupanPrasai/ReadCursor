@@ -69,12 +69,12 @@ export function useDraggableResizable(options: {
       let newLeft = startLeft;
       let newTop = startTop;
 
-      // --- Horizontal ---
+      // Horizontal
       if (direction.includes('e')) {
         // Right edge follows mouse
         const desiredWidth = startWidth + dx;
         newWidth = clamp(desiredWidth, options.minWidth, options.maxWidth);
-        // left stays anchored at startLeft
+        // Left side stays anchored at startLeft
         newLeft = startLeft;
       }
 
@@ -85,7 +85,7 @@ export function useDraggableResizable(options: {
         newLeft = startRight - newWidth; // <- key fix: recompute from anchored right edge
       }
 
-      // --- Vertical ---
+      // Vertical
       if (direction.includes('s')) {
         // Bottom edge follows mouse
         const desiredHeight = startHeight + dy;
@@ -97,7 +97,7 @@ export function useDraggableResizable(options: {
         // Top edge follows mouse but bottom edge is anchored
         const desiredHeight = startHeight - dy;
         newHeight = clamp(desiredHeight, options.minHeight, options.maxHeight);
-        newTop = startBottom - newHeight; // <- key fix: recompute from anchored bottom edge
+        newTop = startBottom - newHeight;
       }
 
       readerPanel.style.width = `${newWidth}px`;
@@ -117,4 +117,3 @@ export function useDraggableResizable(options: {
 
   return { readerPanelRef, startDrag, startResize };
 }
-

@@ -18,7 +18,6 @@ const Popup = () => {
 
   const [injecting, setInjecting] = useState(false);
 
-  // ✅ keep logic the same; only wrapped with a small loading state for UX
   const injectContentScript = async () => {
     if (injecting) return;
     setInjecting(true);

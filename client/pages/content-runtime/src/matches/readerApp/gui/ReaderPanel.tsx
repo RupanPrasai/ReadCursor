@@ -67,7 +67,8 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
   const [savedRect, setSavedRect] = useState<PanelRect | null>(null);
   const [pendingStyle, setPendingStyle] = useState<PendingStyle>(null);
 
-  // ---- inverse-DPR scaling to neutralize browser zoom "getting huge"
+  // ---- inverse-DPR scaling to neutralize browser zoom
+
   const baseDprRef = useRef<number | null>(null);
   const [panelScale, setPanelScale] = useState(1);
   const prevScaleRef = useRef(1);
@@ -87,9 +88,10 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
       const cur = window.devicePixelRatio || 1;
 
       // zoom-in => cur increases => scale < 1
+
       let s = base / cur;
 
-      // Compensate both zoom-in and zoom-out (keeps physical size consistent)
+      // Compensate for both zoom-in and zoom-out (keeps physical size consistent)
       s = Math.min(1.4, Math.max(0.35, s));
 
       setPanelScale(s);
@@ -106,7 +108,8 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
   }, []);
 
   // Apply scale (only affects open mode; pill stays normal)
-  // Apply scale (open + minimized pill)
+  // Apply scale (open & minimized pill)
+
   useLayoutEffect(() => {
     const el = readerPanelRef.current;
     if (!el) return;
@@ -116,11 +119,13 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
     if (prev === next) return;
 
     // Current visual rect under PREV scale
+
     const r = el.getBoundingClientRect();
     const unscaledW = Math.round(r.width / prev);
     const unscaledH = Math.round(r.height / prev);
 
     // Keep physical position stable across scale changes
+
     const leftUnscaled = r.left / prev;
     const topUnscaled = r.top / prev;
 
@@ -161,7 +166,7 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
 
     const s = prevScaleRef.current || 1;
 
-    // Convert unscaled -> CSS left/top for current scale
+    // Convert unscaled to CSS left/top for current scale
     const cssRect = {
       left: rect.left * s,
       top: rect.top * s,
@@ -273,9 +278,9 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
     );
   }
 
-  // -----------------------------
+  //
   // Minimized pill render
-  // -----------------------------
+  //
   if (mode === 'minimized') {
     return (
       <div
@@ -311,9 +316,9 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
     );
   }
 
-  // -----------------------------
+  //
   // Open render
-  // -----------------------------
+  //
   return (
     <PanelShell
       panelRef={readerPanelRef}

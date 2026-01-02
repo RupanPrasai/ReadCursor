@@ -92,9 +92,8 @@ export class ReaderController {
       const range = this.rangeByRcid.get(rcid);
       const pos = this.rcidPosByRcid.get(rcid);
 
-      // matches your prevBlock() semantics:
-      // - if not at first word of block, "Prev" restarts block
-      // - else it goes to previous block if one exists
+      // If it's not at first word of block, Prev restarts block
+      // Or it goes to previous block if one exists
       if (range && anchorIndex > range.start) canPrevBlock = true;
       else if (typeof pos === 'number' && pos > 0) canPrevBlock = true;
 
@@ -178,10 +177,11 @@ export class ReaderController {
   }
 
   /**
-   * Snapshot current "place" in a way that's stable across geometry rebuilds:
-   * - primary: (rcid, offset within that block)
-   * - fallback: absolute index
+   * Snapshot current place that's stable across geometry rebuilds:
+   * Primary - (rcid, offset within that block)
+   * Fallback - absolute index
    */
+
   public snapshotAnchor(): ReaderAnchorSnapshot {
     const absoluteIndex = this.getAnchorWordIndex();
     const rcid = this.getCurrentRcid();
@@ -213,17 +213,21 @@ export class ReaderController {
       }
     }
 
-    // fallback: absolute index
+    // Fallback - absolute index
     return this.clampWordIndex(snapshot.absoluteIndex);
   }
 
   /**
    * Replaces geometry while preserving:
-   * - reading position (rcid + offset)
-   * - PLAYING vs PAUSED vs READY semantics
+   * - Reading position (rcid + offset)
+   * - PLAYING vs PAUSED vs READY semantics / state
    *
    * This is what App will call after recomputing word geometry on resize/zoom.
+   * Necessary to maintain geometric stability in the scenario
+   * where a user / client zooms in or out /
+   * or changes browser window size
    */
+
   public reloadGeometry(words: WordGeometry[]) {
     if (!words?.length) return;
 
@@ -232,22 +236,24 @@ export class ReaderController {
     const wasPlaying = this.state.isPlaying();
     const wasPaused = this.state.isPaused();
 
-    // If we were ENDED/IDLE, allow play again after reload.
+    // If ENDED/IDLE, allow play again after reload.
     this.state.setReady();
 
-    // stop timing + clear visuals while swapping the backing array
+    // Stop timing + clear visuals while swapping the backing array
+
     this.clearTimer();
     this.resumePending = false;
     this.highlighter.clearAll();
 
     // swap & rebuild indices
+    //
     this.words = words;
     this.rebuildRangesAndOrder(words);
 
     const highlightIndex = this.resolveIndexFromSnapshot(snap);
 
     if (wasPlaying) {
-      // For PLAYING, we want scheduleNext() to highlight highlightIndex and then
+      // For PLAYING, scheduleNext() to highlight highlightIndex and then
       // advance index to next word (maintains invariants).
       this.index = highlightIndex;
       this.scheduleNext();
@@ -255,7 +261,7 @@ export class ReaderController {
     }
 
     if (wasPaused) {
-      // For PAUSED, we want:
+      // For PAUSED:
       // - highlight the same word immediately
       // - keep index pointing to NEXT word (so resumePending works correctly)
       this.seekPaused(highlightIndex);
@@ -313,8 +319,10 @@ export class ReaderController {
     this.index = i;
 
     if (wasPlaying)
-      this.scheduleNext(); // highlights + continues
-    else this.seek(i); // highlights only, no auto-advance
+      // highlights + continues
+      this.scheduleNext();
+    // highlights only, no auto-advance
+    else this.seek(i);
 
     this.notify();
   }
@@ -361,9 +369,9 @@ export class ReaderController {
 
   /**
    * Start from selection context.
-   * Rule:
+   * It works like this:
    *  - If a real selection exists (selStartChar finite) and word start/end offsets are element-global:
-   *      ALWAYS use char-offset mapping (layout-proof under zoom/resize reflow).
+   *      Always use char-offset mapping (layout-proof under zoom/resize reflow).
    *  - Only fallback to rect-proximity when selection mapping is not available.
    */
 
@@ -396,7 +404,7 @@ export class ReaderController {
     const selStartChar = lastCtx.selStartChar;
     const hasSel = typeof selStartChar === 'number' && Number.isFinite(selStartChar);
 
-    // Sanity: offsets within this block should be non-decreasing if they're element-global.
+    // Offsets within this block should be non-decreasing if they're element-global.
     let charOffsetsLookGlobal = true;
     {
       let prev = -Infinity;

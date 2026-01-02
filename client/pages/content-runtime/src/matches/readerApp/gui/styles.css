@@ -1,4 +1,4 @@
-/* Resize hitzones */
+/* Resize */
 .handle {
   position: absolute;
   background: transparent;
@@ -78,7 +78,6 @@
 /* Speed Slider */
 .rc-range {
   --rc-accent: #0ea5e9;
-  /* change this hex to whatever */
   --rc-track: #e2e8f0;
   --rc-track-h: 16px;
   --rc-thumb: 22px;
@@ -94,7 +93,7 @@
   outline: none;
 }
 
-/* WebKit (Chrome/Edge) */
+/* WebKit  */
 .rc-range::-webkit-slider-runnable-track {
   height: var(--rc-track-h);
   border-radius: 9999px;

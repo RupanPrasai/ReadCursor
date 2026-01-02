@@ -29,7 +29,7 @@ function getViewportSignature(): string {
 export default function App({ destroyCallback, wordGeometry }: AppProps) {
   const [controller] = useState(() => new ReaderController());
 
-  // pending start ctx (used for: init-before-load AND rebuild-in-flight)
+  // pending start ctx (used for: init-before-load & rebuild-in-flight)
   const pendingStartRef = useRef<any>(null);
 
   const loadedRef = useRef(false);
@@ -73,7 +73,7 @@ export default function App({ destroyCallback, wordGeometry }: AppProps) {
       } finally {
         rebuildInFlightRef.current = false;
 
-        // If a startHere came in while we were rebuilding, run it now against fresh geometry.
+        // If a startHere call came in while rebuilding, run it now against fresh geometry.
         if (pendingStartRef.current && loadedRef.current) {
           const ctx = pendingStartRef.current;
           pendingStartRef.current = null;
@@ -92,7 +92,7 @@ export default function App({ destroyCallback, wordGeometry }: AppProps) {
     controller.setWPM(150);
     loadedRef.current = true;
 
-    // establish baseline signature at the moment geometry is considered "valid"
+    // establish baseline at the moment geometry is considered "valid"
     lastSigRef.current = getViewportSignature();
 
     if (pendingStartRef.current) {
@@ -113,6 +113,7 @@ export default function App({ destroyCallback, wordGeometry }: AppProps) {
 
       // If viewport changed since last known-good geometry, rebuild immediately
       // so startFromHere maps against CURRENT layout.
+      //
       const nextSig = getViewportSignature();
       const prevSig = lastSigRef.current;
 

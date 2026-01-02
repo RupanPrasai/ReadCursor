@@ -2,6 +2,10 @@ import '@src/Options.css';
 import { withErrorBoundary, withSuspense } from '@extension/shared';
 import { ErrorDisplay, LoadingSpinner } from '@extension/ui';
 
+// Options need to be configured at a future iteration
+// Although base functionality of the software works fine
+// Without it --- At the moment
+
 const Options = () => {
   const logo = 'options/iconbase.png';
 
@@ -27,4 +31,3 @@ const Options = () => {
 };
 
 export default withErrorBoundary(withSuspense(Options, <LoadingSpinner />), ErrorDisplay);
-

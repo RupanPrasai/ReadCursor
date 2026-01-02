@@ -52,11 +52,9 @@ function findTitleNode(title: string): HTMLElement | null {
 }
 
 /**
- * Stable rcid labeling rules:
- * - Only label ELEMENT nodes (never count text nodes)
- * - Never overwrite an existing data-rcid
- * - Start numbering after the current max numeric rcid to avoid collisions
+ * - Labelling DOM Nodes
  */
+
 function labelDomNodes(): void {
   let max = 0;
 
@@ -74,6 +72,7 @@ function labelDomNodes(): void {
   let rcCounter = max + 1;
 
   // Label any unlabeled elements
+
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
   while (walker.nextNode()) {
     const el = walker.currentNode as Element;

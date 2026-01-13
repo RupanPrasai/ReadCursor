@@ -1,12 +1,9 @@
-import { canSwitchTheme } from '../helpers/theme.js';
-
 describe('Webextension Popup', () => {
-  it('should open the popup successfully', async () => {
+  it('renders the popup and the inject button', async () => {
     const extensionPath = await browser.getExtensionPath();
-    const popupUrl = `${extensionPath}/popup/index.html`;
-    await browser.url(popupUrl);
+    await browser.url(`${extensionPath}/popup/index.html`);
 
     await expect(browser).toHaveTitle('Popup');
-    await canSwitchTheme();
+    await expect($('button=Open Read Cursor')).toBeExisting();
   });
 });

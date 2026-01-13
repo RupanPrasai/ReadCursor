@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>ReadCursor E2E Fixture</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      line-height: 1.55;
+      margin: 0;
+      padding: 32px;
+    }
+
+    article {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    p {
+      margin: 18px 0;
+      font-size: 16px;
+    }
+
+    .spacer {
+      height: 900px;
+    }
+  </style>
+</head>
+
+<body>
+  <article>
+    <h1>Basic Article Fixture</h1>
+
+    <p id="p1">
+      This is paragraph one. It exists to give the reader engine predictable text geometry and stable layout.
+      We want enough words to make highlighting obvious and repeatable across runs.
+    </p>
+
+    <p id="p2">
+      This is paragraph two. It should become a separate readable block. We will target this block for
+      the start-from-here test by dispatching the readcursor:startHere event with its rcid and coordinates.
+    </p>
+
+    <p id="p3">
+      Paragraph three includes <strong>inline elements</strong> and <em>mixed formatting</em> so extraction
+      and word geometry have to handle nested nodes correctly.
+    </p>
+
+    <div class="spacer"></div>
+
+    <p id="p4">
+      Paragraph four is far down the page to test scrolling behavior and ensure the runtime doesn’t rely on
+      initial viewport-only content.
+    </p>
+  </article>
+</body>
+
+</html>

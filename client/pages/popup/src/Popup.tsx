@@ -1,6 +1,6 @@
 import '@src/Popup.css';
 import { t } from '@extension/i18n';
-import { PROJECT_URL_OBJECT, useStorage, withErrorBoundary, withSuspense } from '@extension/shared';
+import { useStorage, withErrorBoundary, withSuspense } from '@extension/shared';
 import { exampleThemeStorage } from '@extension/storage';
 import { cn, ErrorDisplay, LoadingSpinner, ToggleButton } from '@extension/ui';
 import { useState } from 'react';
@@ -18,25 +18,45 @@ const Popup = () => {
 
   const [injecting, setInjecting] = useState(false);
 
+  const pickInjectionTab = async () => {
+    const [active] = await chrome.tabs.query({ currentWindow: true, active: true });
+    if (!active?.id) return null;
+
+    try {
+      const current = await chrome.tabs.getCurrent();
+      if (current?.id && active.id === current.id) {
+        const tabs = await chrome.tabs.query({ currentWindow: true });
+        const other = tabs.find(t => t.id && t.id !== current.id);
+        if (other?.id) return other;
+      }
+    } catch {
+      // chrome.tabs.getCurrent can be unsupported in some extension contexts; ignore.
+    }
+
+    return active;
+  };
+
   const injectContentScript = async () => {
     if (injecting) return;
     setInjecting(true);
 
     try {
-      const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
+      const tab = await pickInjectionTab();
+      if (!tab?.id) return;
 
-      if (tab.url!.startsWith('about:') || tab.url!.startsWith('chrome:')) {
+      const url = tab.url ?? '';
+      if (url.startsWith('about:') || url.startsWith('chrome:')) {
         chrome.notifications.create('inject-error', notificationOptions);
         return;
       }
 
       await chrome.scripting
         .executeScript({
-          target: { tabId: tab.id! },
+          target: { tabId: tab.id },
           files: ['/content-runtime/readerApp.iife.js'],
         })
         .catch(err => {
-          if (err.message.includes('Cannot access a chrome:// URL')) {
+          if (err?.message?.includes?.('Cannot access a chrome:// URL')) {
             chrome.notifications.create('inject-error', notificationOptions);
           }
         });

@@ -1,0 +1,45 @@
+{
+  "extensionDescription": {
+    "description": "Extension description",
+    "message": "Overlay a reading cursor on webpages; highlight text and auto-advance at a configurable WPM with a draggable panel."
+  },
+  "extensionName": {
+    "description": "Extension name",
+    "message": "ReadCursor"
+  },
+  "toggleTheme": {
+    "message": "Toggle theme"
+  },
+  "injectButton": {
+    "message": "Open ReadCursor"
+  },
+  "greeting": {
+    "description": "Greeting message",
+    "message": "Hello, My name is $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "John Doe"
+      }
+    }
+  },
+  "hello": {
+    "description": "Placeholder example",
+    "message": "Hello $1"
+  },
+  "displayErrorInfo": {
+    "message": "Error occur"
+  },
+  "displayErrorDescription": {
+    "message": "Sorry, something went wrong while loading the page."
+  },
+  "displayErrorDetailsInfo": {
+    "message": "Error details:"
+  },
+  "displayErrorUnknownErrorInfo": {
+    "message": "Unknown error"
+  },
+  "displayErrorReset": {
+    "message": "Run Again"
+  }
+}

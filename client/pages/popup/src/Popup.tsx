@@ -18,22 +18,48 @@ const Popup = () => {
 
   const [injecting, setInjecting] = useState(false);
 
-  const pickInjectionTab = async () => {
-    const [active] = await chrome.tabs.query({ currentWindow: true, active: true });
-    if (!active?.id) return null;
+  const isBlockedInjectUrl = (url: string) =>
+    url.startsWith('about:') ||
+    url.startsWith('chrome:') ||
+    url.startsWith('chrome-extension:') ||
+    url.startsWith('edge:') ||
+    url.startsWith('devtools:') ||
+    url.startsWith('view-source:') ||
+    url.startsWith('data:');
 
-    try {
-      const current = await chrome.tabs.getCurrent();
-      if (current?.id && active.id === current.id) {
-        const tabs = await chrome.tabs.query({ currentWindow: true });
-        const other = tabs.find(t => t.id && t.id !== current.id);
-        if (other?.id) return other;
+  const pickInjectionTab = async () => {
+    const tabs = await chrome.tabs.query({ currentWindow: true });
+
+    const extBase = chrome.runtime.getURL(''); // chrome-extension://<id>/
+    const isHttp = (url: string) => url.startsWith('http://') || url.startsWith('https://');
+
+    const isInjectable = (t: chrome.tabs.Tab) => {
+      const url = t.url ?? '';
+      if (!t.id) return false;
+      if (!url) return false;
+      if (!isHttp(url)) return false;
+      if (isBlockedInjectUrl(url)) return false;
+      if (url.startsWith(extBase)) return false;
+      return true;
+    };
+
+    const active = tabs.find(t => t.active);
+    if (active?.url) {
+      // If active is a blocked system page, do not inject elsewhere.
+      if (isBlockedInjectUrl(active.url)) return null;
+
+      // Normal case: active is a normal page, inject into it.
+      if (isInjectable(active)) return active;
+
+      // E2E case: active is the popup opened as a tab (extension page), fallback allowed.
+      if (active.url.startsWith(extBase)) {
+        return tabs.find(isInjectable) ?? null;
       }
-    } catch {
-      // chrome.tabs.getCurrent can be unsupported in some extension contexts; ignore.
+
+      return null;
     }
 
-    return active;
+    return null;
   };
 
   const injectContentScript = async () => {
@@ -42,24 +68,24 @@ const Popup = () => {
 
     try {
       const tab = await pickInjectionTab();
-      if (!tab?.id) return;
-
-      const url = tab.url ?? '';
-      if (url.startsWith('about:') || url.startsWith('chrome:')) {
+      if (!tab?.id) {
         chrome.notifications.create('inject-error', notificationOptions);
         return;
       }
 
-      await chrome.scripting
-        .executeScript({
-          target: { tabId: tab.id },
-          files: ['/content-runtime/readerApp.iife.js'],
-        })
-        .catch(err => {
-          if (err?.message?.includes?.('Cannot access a chrome:// URL')) {
-            chrome.notifications.create('inject-error', notificationOptions);
-          }
-        });
+      if (isBlockedInjectUrl(tab.url ?? '')) {
+        chrome.notifications.create('inject-error', notificationOptions);
+        return;
+      }
+
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['/content-runtime/readerApp.iife.js'],
+      });
+    } catch (err: any) {
+      // Don’t silently swallow non-chrome:// failures (this was hiding your E2E issue)
+      chrome.notifications.create('inject-error', notificationOptions);
+      console.warn('[ReadCursor] inject failed', err);
     } finally {
       setInjecting(false);
     }

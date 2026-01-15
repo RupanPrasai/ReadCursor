@@ -2,7 +2,7 @@ import { config as baseConfig } from './wdio.conf.js';
 import { getChromeExtensionPath, getFirefoxExtensionPath } from '../utils/extension-path.js';
 import { IS_CI, IS_FIREFOX } from '@extension/env';
 import { execFileSync } from 'node:child_process';
-import { readdir, readFile, mkdir, rm } from 'node:fs/promises';
+import { readdir, readFile, mkdir, rm, stat } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 
 const findSystemChrome = () => {
@@ -32,9 +32,18 @@ if (!IS_FIREFOX && !systemChrome) {
 const extName = IS_FIREFOX ? '.xpi' : '.zip';
 const distZipDir = join(import.meta.dirname, '../../../dist-zip');
 
-const extensions = await readdir(distZipDir);
-const latestExtension = extensions.filter(file => extname(file) === extName).at(-1);
-if (!latestExtension) throw new Error(`No ${extName} found in ${distZipDir}`);
+const entries = (await readdir(distZipDir)).filter(f => extname(f) === extName);
+if (!entries.length) throw new Error(`No ${extName} found in ${distZipDir}`);
+
+const withTimes = await Promise.all(
+  entries.map(async f => ({
+    f,
+    mtimeMs: (await stat(join(distZipDir, f))).mtimeMs,
+  })),
+);
+
+withTimes.sort((a, b) => a.mtimeMs - b.mtimeMs);
+const latestExtension = withTimes.at(-1)!.f;
 
 const extPath = join(distZipDir, latestExtension);
 
@@ -69,7 +78,6 @@ const chromeCapabilities = {
       // load unpacked extension
       `--load-extension=${unpackDir}`,
 
-      // optional: uncomment if it still exits (gives stderr logs)
       // '--enable-logging=stderr',
       // '--v=1',
 
@@ -111,4 +119,3 @@ export const config: WebdriverIO.Config = {
     if (!IS_CI) await browser.pause(200);
   },
 };
-

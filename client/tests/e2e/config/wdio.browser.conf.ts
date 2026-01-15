@@ -2,7 +2,7 @@ import { config as baseConfig } from './wdio.conf.js';
 import { getChromeExtensionPath, getFirefoxExtensionPath } from '../utils/extension-path.js';
 import { IS_CI, IS_FIREFOX } from '@extension/env';
 import { execFileSync } from 'node:child_process';
-import { readdir, readFile, mkdir, rm, stat } from 'node:fs/promises';
+import { readdir, readFile, mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 
 const findSystemChrome = () => {
@@ -57,10 +57,27 @@ const chromeUserDataDir = join(
 
 // Unpack for Chrome so capabilities don't include a giant base64 string
 const unpackDir = join(import.meta.dirname, '../.tmp/unpacked-extension');
+
+const patchManifestForE2E = async (dir: string) => {
+  const manifestPath = join(dir, 'manifest.json');
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+
+  manifest.host_permissions = Array.from(
+    new Set([...(manifest.host_permissions ?? []), 'http://127.0.0.1/*', 'http://localhost/*']),
+  );
+
+  // for E2E: popup read tab URLs reliably
+  manifest.permissions = Array.from(new Set([...(manifest.permissions ?? []), 'tabs']));
+
+  await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
+};
+
 if (!IS_FIREFOX) {
   await rm(unpackDir, { recursive: true, force: true });
   await mkdir(unpackDir, { recursive: true });
   execFileSync('unzip', ['-q', extPath, '-d', unpackDir]);
+
+  await patchManifestForE2E(unpackDir);
 }
 
 const chromeCapabilities = {

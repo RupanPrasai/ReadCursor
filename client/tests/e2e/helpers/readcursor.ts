@@ -4,25 +4,40 @@ export const openPopupInNewTab = async () => {
   const extensionPath = await browser.getExtensionPath();
   const popupUrl = `${extensionPath}/popup/index.html`;
 
-  const before = await browser.getWindowHandles();
-
-  // Open a NEW TAB in the same window (popup injection uses currentWindow)
-  //
+  // Trigger a new tab from the current page (keeps it in the same Chrome window in practice)
   await browser.execute((url: string) => window.open(url, '_blank'), popupUrl);
 
-  await browser.waitUntil(async () => {
-    const after = await browser.getWindowHandles();
-    return after.length === before.length + 1;
-  });
+  const findHandleForUrl = async (targetUrl: string) => {
+    const handles = await browser.getWindowHandles();
+    for (const h of handles) {
+      await browser.switchToWindow(h);
+      const url = await browser.getUrl();
+      if (url === targetUrl) return h;
+    }
+    return null;
+  };
 
-  const after = await browser.getWindowHandles();
-  const newHandle = after.find(h => !before.includes(h));
-  if (!newHandle) throw new Error('Failed to open popup tab');
+  let popupHandle: string | null = null;
 
-  await browser.switchToWindow(newHandle);
-  await expect(browser).toHaveTitle('Popup');
+  await browser.waitUntil(
+    async () => {
+      popupHandle = await findHandleForUrl(popupUrl);
+      return !!popupHandle;
+    },
+    {
+      timeout: 20000,
+      timeoutMsg: `Popup tab not found by URL: ${popupUrl}`,
+    },
+  );
 
-  return { popupUrl, popupHandle: newHandle };
+  if (!popupHandle) throw new Error('Popup handle not found');
+
+  await browser.switchToWindow(popupHandle);
+
+  // Don’t assert title (it’s flaky). Assert the UI exists.
+  await $('button=Open Read Cursor').waitForExist({ timeout: 10000 });
+
+  return { popupUrl, popupHandle };
 };
 
 export const clickOpenReadCursor = async () => {

@@ -1,13 +1,11 @@
 import { readFile } from 'node:fs/promises';
 import http from 'node:http';
-import { extname, join, normalize } from 'node:path';
+import { join, normalize, extname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-let server:
-  | {
-    baseUrl: string;
-    close: () => Promise<void>;
-  }
-  | undefined;
+let baseUrl: string | null = null;
+
+const fixturesRoot = normalize(fileURLToPath(new URL('../fixtures/', import.meta.url)));
 
 const contentTypeFor = (path: string) => {
   switch (extname(path)) {
@@ -19,31 +17,19 @@ const contentTypeFor = (path: string) => {
       return 'text/css; charset=utf-8';
     case '.json':
       return 'application/json; charset=utf-8';
-    case '.png':
-      return 'image/png';
-    case '.jpg':
-    case '.jpeg':
-      return 'image/jpeg';
-    case '.svg':
-      return 'image/svg+xml; charset=utf-8';
     default:
       return 'text/plain; charset=utf-8';
   }
 };
 
-async function ensureFixtureServer() {
-  if (server) return server;
+const ensureFixtureServer = async () => {
+  if (baseUrl) return baseUrl;
 
-  // helpers/fixtures.ts to ../fixtures/
-  const fixturesDir = new URL(`../fixtures/`, import.meta.url);
-  const fixturesRoot = normalize(join(fixturesDir.pathname));
-
-  const s = http.createServer(async (req, res) => {
+  const server = http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url ?? '/', 'http://127.0.0.1');
       const pathname = url.pathname === '/' ? '/basic-article.html' : url.pathname;
 
-      // Prevent path traversal
       const abs = normalize(join(fixturesRoot, pathname));
       if (!abs.startsWith(fixturesRoot)) {
         res.writeHead(403);
@@ -57,32 +43,28 @@ async function ensureFixtureServer() {
         'cache-control': 'no-store',
       });
       res.end(body);
-    } catch (e: any) {
+    } catch {
       res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
-      res.end(`Not found: ${(e && e.message) || e}`);
+      res.end('Not found');
     }
   });
 
-  await new Promise<void>(resolve => s.listen(0, '127.0.0.1', resolve));
-  const addr = s.address();
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const addr = server.address();
   if (!addr || typeof addr === 'string') throw new Error('Failed to start fixture server');
 
-  const baseUrl = `http://127.0.0.1:${addr.port}`;
-
-  server = {
-    baseUrl,
-    close: () => new Promise<void>((resolve, reject) => s.close(err => (err ? reject(err) : resolve()))),
-  };
+  baseUrl = `http://127.0.0.1:${addr.port}`;
 
   process.once('exit', () => {
-    // cleanup
-    void server?.close().catch(() => { });
+    try {
+      server.close();
+    } catch { }
   });
 
-  return server;
-}
+  return baseUrl;
+};
 
 export const openFixture = async (name: string) => {
-  const { baseUrl } = await ensureFixtureServer();
-  await browser.url(`${baseUrl}/${name}.html`);
+  const url = await ensureFixtureServer();
+  await browser.url(`${url}/${name}.html`);
 };

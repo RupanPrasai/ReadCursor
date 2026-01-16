@@ -80,7 +80,7 @@ const Popup = () => {
 
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        files: ['/content-runtime/readerApp.iife.js'],
+        files: ['content-runtime/readerApp.iife.js'],
       });
     } catch (err: any) {
       // Don’t silently swallow non-chrome:// failures (this was hiding your E2E issue)

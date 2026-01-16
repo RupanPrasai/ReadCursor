@@ -1,0 +1,34 @@
+[10199:10314:0115/192417.314226:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[10199:10314:0115/192417.315697:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[10199:10314:0115/192417.316375:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[10199:10314:0115/192417.318448:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[10199:10199:0115/192417.432804:WARNING:chrome/browser/signin/account_consistency_mode_manager.cc:74] Desktop Identity Consistency cannot be enabled as no OAuth client ID and client secret have been configured.
+[10199:10314:0115/192417.460841:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[10199:10314:0115/192417.696400:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[10199:10314:0115/192417.717467:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[10199:10314:0115/192417.717503:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[10199:10199:0115/192417.877743:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[10199:10199:0115/192417.888913:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[10199:10199:0115/192417.913376:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[10199:10314:0115/192417.913523:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[10199:10199:0115/192417.951686:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[10199:10314:0115/192417.952037:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[10199:10199:0115/192417.960996:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.Properties.GetAll: object_path= /org/freedesktop/UPower/devices/DisplayDevice: org.freedesktop.DBus.Error.ServiceUnknown: The name org.freedesktop.UPower was not provided by any .service files
+[10199:10199:0115/192417.961021:WARNING:dbus/property.cc:174] GetAll request failed for: org.freedesktop.UPower.Device
+[10199:10199:0115/192417.974141:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[10199:10314:0115/192417.974497:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[10199:10199:0115/192417.989872:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[10199:10314:0115/192417.991700:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[10199:10199:0115/192417.995865:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[10199:10199:0115/192417.995909:WARNING:ui/base/idle/idle_linux.cc:98] None of the known D-Bus ScreenSaver services could be used.
+[10199:10199:0115/192418.114795:INFO:CONSOLE:86] "Background loaded", source: chrome-extension://pbbfjnjjognjkedklpcakephpmcgpgkf/background.js (86)
+[10199:10199:0115/192418.114937:INFO:CONSOLE:87] "Edit 'chrome-extension/src/background/index.ts' and save to reload.", source: chrome-extension://pbbfjnjjognjkedklpcakephpmcgpgkf/background.js (87)
+[10199:10199:0115/192418.115624:INFO:CONSOLE:71] "theme [object Object]", source: chrome-extension://pbbfjnjjognjkedklpcakephpmcgpgkf/background.js (71)
+[10351:10351:0115/192418.124330:ERROR:components/viz/service/main/viz_main_impl.cc:189] Exiting GPU process due to errors during initialization
+[10199:10199:0115/192418.246718:INFO:CONSOLE:1018] "Launching Mapper instance with selfTargetId: B7E87CA33016886316C65F8590797F25", source:  (1018)
+[10491:10491:0115/192418.261425:WARNING:ui/gfx/linux/gpu_memory_buffer_support_x11.cc:49] dri3 extension not supported.
+[10491:10491:0115/192418.263375:WARNING:sandbox/policy/linux/sandbox_linux.cc:404] InitializeSandbox() called with multiple threads in process gpu-process.
+[10445:10453:0115/192418.289664:ERROR:gpu/ipc/client/command_buffer_proxy_impl.cc:122] ContextResult::kTransientFailure: Failed to send GpuControl.CreateCommandBuffer.
+[10426:10440:0115/192418.291278:ERROR:gpu/ipc/client/command_buffer_proxy_impl.cc:122] ContextResult::kTransientFailure: Failed to send GpuControl.CreateCommandBuffer.
+[10199:10199:0115/192418.893020:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:732] Message 0 rejected by interface blink.mojom.WidgetHost
+[10199:10315:0115/192421.261943:ERROR:google_apis/gcm/engine/registration_request.cc:292] Registration response error message: DEPRECATED_ENDPOINT

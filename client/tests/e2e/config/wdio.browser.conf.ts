@@ -66,7 +66,7 @@ const patchManifestForE2E = async (dir: string) => {
     new Set([...(manifest.host_permissions ?? []), 'http://127.0.0.1/*', 'http://localhost/*']),
   );
 
-  // for E2E: popup read tab URLs reliably
+  // optional but helpful (tab.url access etc.)
   manifest.permissions = Array.from(new Set([...(manifest.permissions ?? []), 'tabs']));
 
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2));

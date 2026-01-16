@@ -1,0 +1,35 @@
+[7183:7309:0115/191808.126269:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[7183:7309:0115/191808.128060:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[7183:7309:0115/191808.129379:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[7183:7309:0115/191808.129407:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[7183:7183:0115/191808.236819:WARNING:chrome/browser/signin/account_consistency_mode_manager.cc:74] Desktop Identity Consistency cannot be enabled as no OAuth client ID and client secret have been configured.
+[7183:7309:0115/191808.265423:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[7183:7309:0115/191808.484294:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[7183:7309:0115/191808.503226:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[7183:7309:0115/191808.503259:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[7343:7343:0115/191808.584629:ERROR:components/viz/service/main/viz_main_impl.cc:189] Exiting GPU process due to errors during initialization
+[7183:7183:0115/191808.638305:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[7183:7183:0115/191808.645059:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[7183:7183:0115/191808.680720:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[7183:7309:0115/191808.680822:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[7183:7183:0115/191808.702195:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[7183:7309:0115/191808.702424:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[7183:7183:0115/191808.709538:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.Properties.GetAll: object_path= /org/freedesktop/UPower/devices/DisplayDevice: org.freedesktop.DBus.Error.ServiceUnknown: The name org.freedesktop.UPower was not provided by any .service files
+[7183:7183:0115/191808.709567:WARNING:dbus/property.cc:174] GetAll request failed for: org.freedesktop.UPower.Device
+[7183:7183:0115/191808.718531:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[7183:7309:0115/191808.718697:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[7183:7183:0115/191808.725882:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[7183:7309:0115/191808.725945:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[7183:7183:0115/191808.731948:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[7183:7183:0115/191808.731974:WARNING:ui/base/idle/idle_linux.cc:98] None of the known D-Bus ScreenSaver services could be used.
+[7183:7183:0115/191808.870952:INFO:CONSOLE:86] "Background loaded", source: chrome-extension://pbbfjnjjognjkedklpcakephpmcgpgkf/background.js (86)
+[7183:7183:0115/191808.874485:INFO:CONSOLE:87] "Edit 'chrome-extension/src/background/index.ts' and save to reload.", source: chrome-extension://pbbfjnjjognjkedklpcakephpmcgpgkf/background.js (87)
+[7183:7183:0115/191808.893129:INFO:CONSOLE:71] "theme [object Object]", source: chrome-extension://pbbfjnjjognjkedklpcakephpmcgpgkf/background.js (71)
+[7444:7444:0115/191808.908265:ERROR:components/viz/service/main/viz_main_impl.cc:189] Exiting GPU process due to errors during initialization
+[7480:7480:0115/191809.019594:WARNING:ui/gfx/linux/gpu_memory_buffer_support_x11.cc:49] dri3 extension not supported.
+[7480:7480:0115/191809.020695:WARNING:sandbox/policy/linux/sandbox_linux.cc:404] InitializeSandbox() called with multiple threads in process gpu-process.
+[7429:7443:0115/191809.043082:ERROR:gpu/ipc/client/command_buffer_proxy_impl.cc:122] ContextResult::kTransientFailure: Failed to send GpuControl.CreateCommandBuffer.
+[7448:7455:0115/191809.045976:ERROR:gpu/ipc/client/command_buffer_proxy_impl.cc:122] ContextResult::kTransientFailure: Failed to send GpuControl.CreateCommandBuffer.
+[7183:7183:0115/191809.058836:INFO:CONSOLE:1018] "Launching Mapper instance with selfTargetId: EA7258BB31076B939BCDA4A89C6C44D0", source:  (1018)
+[7183:7183:0115/191809.720637:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:732] Message 0 rejected by interface blink.mojom.WidgetHost
+[7183:7310:0115/191812.047186:ERROR:google_apis/gcm/engine/registration_request.cc:292] Registration response error message: DEPRECATED_ENDPOINT

@@ -34,24 +34,27 @@ export const openPopupInNewTab = async () => {
   const popupUrl = `${extensionPath}/popup/index.html`;
 
   const openerHandle = await browser.getWindowHandle();
+  const before = new Set(await browser.getWindowHandles());
 
-  // IMPORTANT:
-  // ChromeDriver often refuses newWindow() with chrome-extension:// directly.
-  // So: open about:blank (newWindow returns the new handle), then navigate.
-  let popupHandle: string;
-  try {
-    popupHandle = (await browser.newWindow('about:blank')) as unknown as string;
-  } catch (e) {
-    await dumpWindows('openPopupInNewTab: newWindow failed');
-    throw e;
-  }
+  // Reliable: create a normal window first
+  await browser.newWindow('about:blank');
 
-  if (!popupHandle || typeof popupHandle !== 'string') {
-    await dumpWindows('openPopupInNewTab: missing popupHandle');
-    throw new Error('Popup handle not returned by browser.newWindow');
+  await browser.waitUntil(async () => (await browser.getWindowHandles()).length > before.size, {
+    timeout: 20000,
+    timeoutMsg: 'Popup window not created (no new handle after newWindow about:blank)',
+  });
+
+  const after = await browser.getWindowHandles();
+  const popupHandle = after.find(h => !before.has(h)) ?? null;
+
+  if (!popupHandle) {
+    await dumpWindows('openPopupInNewTab: no new handle after about:blank');
+    throw new Error('Popup handle not found after opening about:blank');
   }
 
   await browser.switchToWindow(popupHandle);
+
+  // Now navigate the new window to the extension page
   await browser.url(popupUrl);
 
   await browser.waitUntil(

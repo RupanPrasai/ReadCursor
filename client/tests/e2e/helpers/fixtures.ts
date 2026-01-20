@@ -66,5 +66,8 @@ const ensureFixtureServer = async () => {
 
 export const openFixture = async (name: string) => {
   const url = await ensureFixtureServer();
-  await browser.url(`${url}/${name}.html`);
+  console.log('[E2E] fixture baseUrl =', url);
+  const full = `${url}/${name}.html`;
+  console.log('[E2E] navigating to =', full);
+  await browser.url(full);
 };

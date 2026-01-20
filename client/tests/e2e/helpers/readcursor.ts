@@ -1,33 +1,68 @@
 const HOST_MARKER = 'data-readcursor-e2e-host';
 
+const urlMatchesPopup = (actual: string, popupUrl: string) =>
+  actual === popupUrl || actual.startsWith(`${popupUrl}#`) || actual.startsWith(`${popupUrl}?`);
+
+const safeGetUrl = async () => {
+  try {
+    return await browser.getUrl();
+  } catch {
+    return '';
+  }
+};
+
+export const dumpWindows = async (label = 'windows') => {
+  const handles = await browser.getWindowHandles();
+  const out: Array<{ handle: string; url: string }> = [];
+
+  for (const h of handles) {
+    try {
+      await browser.switchToWindow(h);
+      out.push({ handle: h, url: await safeGetUrl() });
+    } catch {
+      out.push({ handle: h, url: '<unavailable>' });
+    }
+  }
+
+  console.log(`[E2E] ${label}:`, JSON.stringify(out, null, 2));
+
+  return out;
+};
+
 export const openPopupInNewTab = async () => {
   const extensionPath = await browser.getExtensionPath();
   const popupUrl = `${extensionPath}/popup/index.html`;
 
   const openerHandle = await browser.getWindowHandle();
-  const before = new Set(await browser.getWindowHandles());
 
-  // Create tab deterministically (don’t depend on window.open being allowed)
-  await browser.newWindow(popupUrl);
+  // IMPORTANT:
+  // ChromeDriver often refuses newWindow() with chrome-extension:// directly.
+  // So: open about:blank (newWindow returns the new handle), then navigate.
+  let popupHandle: string;
+  try {
+    popupHandle = (await browser.newWindow('about:blank')) as unknown as string;
+  } catch (e) {
+    await dumpWindows('openPopupInNewTab: newWindow failed');
+    throw e;
+  }
 
-  await browser.waitUntil(async () => (await browser.getWindowHandles()).length > before.size, {
-    timeout: 20000,
-    timeoutMsg: `Popup tab not created: ${popupUrl}`,
-  });
-
-  const after = await browser.getWindowHandles();
-  const popupHandle = after.find(h => !before.has(h)) ?? null;
-  if (!popupHandle) throw new Error(`Popup handle not found (expected new handle for ${popupUrl})`);
+  if (!popupHandle || typeof popupHandle !== 'string') {
+    await dumpWindows('openPopupInNewTab: missing popupHandle');
+    throw new Error('Popup handle not returned by browser.newWindow');
+  }
 
   await browser.switchToWindow(popupHandle);
+  await browser.url(popupUrl);
 
-  // URL can have # or ? depending on router
   await browser.waitUntil(
     async () => {
-      const u = await browser.getUrl();
-      return u === popupUrl || u.startsWith(`${popupUrl}#`) || u.startsWith(`${popupUrl}?`);
+      const u = await safeGetUrl();
+      return u ? urlMatchesPopup(u, popupUrl) : false;
     },
-    { timeout: 10000, timeoutMsg: `Popup URL mismatch (expected ${popupUrl}, got ${await browser.getUrl()})` },
+    {
+      timeout: 15000,
+      timeoutMsg: `Popup URL never stabilized for ${popupUrl} (got ${await safeGetUrl()})`,
+    },
   );
 
   await $('button=Open Read Cursor').waitForExist({ timeout: 10000 });
@@ -37,17 +72,17 @@ export const openPopupInNewTab = async () => {
 
 export const clickOpenReadCursor = async () => {
   const btn = await $('button=Open Read Cursor');
-  await btn.waitForClickable();
+  await btn.waitForClickable({ timeout: 10000 });
   await btn.click();
 
-  // Try to observe the busy flip (don’t fail if it was too fast to catch)
+  // Try to observe the busy flip (don’t fail if it was too fast)
   await browser
     .waitUntil(async () => (await btn.getAttribute('aria-busy')) === 'true', { timeout: 1000 })
     .catch(() => { });
 
   // Then wait for injection to finish
   await browser.waitUntil(async () => (await btn.getAttribute('aria-busy')) !== 'true', {
-    timeout: 15000,
+    timeout: 20000,
     timeoutMsg: 'Popup inject button stayed busy too long',
   });
 };
@@ -55,9 +90,8 @@ export const clickOpenReadCursor = async () => {
 export const countReadCursorInstances = async () =>
   await browser.execute(() => {
     let count = 0;
-
-    // IMPORTANT: scan the whole document, not just body descendants
     const all = Array.from(document.querySelectorAll('*')) as HTMLElement[];
+
     for (const el of all) {
       const sr = (el as any).shadowRoot as ShadowRoot | undefined;
       if (sr && sr.querySelector('.app-container')) count++;
@@ -72,13 +106,12 @@ export const waitForReadCursorHost = async () => {
       timeout: 20000,
       timeoutMsg: 'ReadCursor shadow host not found (no .app-container in any shadowRoot)',
     });
-  } catch (e) {
-    // Add useful diagnostics so you’re not blind when it fails
+  } catch {
     const diag = await browser.execute(() => {
       const all = Array.from(document.querySelectorAll('*')) as HTMLElement[];
       const shadowHosts = all.filter(el => (el as any).shadowRoot) as HTMLElement[];
 
-      const sample = shadowHosts.slice(0, 6).map(el => {
+      const sample = shadowHosts.slice(0, 10).map(el => {
         const sr = (el as any).shadowRoot as ShadowRoot;
         return {
           tag: el.tagName,
@@ -115,7 +148,7 @@ export const waitForReadCursorHost = async () => {
   }, HOST_MARKER);
 
   const host = await $(`[${HOST_MARKER}="1"]`);
-  await host.waitForExist();
+  await host.waitForExist({ timeout: 10000 });
   return host;
 };
 

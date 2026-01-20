@@ -3,7 +3,6 @@
  * @param browser
  * @returns path to the Chrome extension
  */
-
 let cachedChromeExtensionPath: string | null = null;
 
 export const getChromeExtensionPath = async (browser: WebdriverIO.Browser) => {
@@ -12,10 +11,9 @@ export const getChromeExtensionPath = async (browser: WebdriverIO.Browser) => {
   const originalHandle = await browser.getWindowHandle();
   const before = new Set(await browser.getWindowHandles());
 
-  // Open extensions manager in a temporary tab/window so we don’t nuke the AUT tab
+  // Open chrome://extensions in a TEMP tab so we don’t destroy the AUT tab
   await browser.newWindow('chrome://extensions/');
 
-  // Find the new handle deterministically
   await browser.waitUntil(async () => (await browser.getWindowHandles()).length > before.size, {
     timeout: 10000,
     timeoutMsg: 'Expected a new window handle for chrome://extensions/',
@@ -38,8 +36,20 @@ export const getChromeExtensionPath = async (browser: WebdriverIO.Browser) => {
   cachedChromeExtensionPath = `chrome-extension://${extensionId}`;
 
   // Close the chrome://extensions tab and return to the original test tab
-  await browser.closeWindow();
-  await browser.switchToWindow(originalHandle);
+  try {
+    await browser.closeWindow();
+  } catch {
+    // ignore: window may already be closed
+  }
+
+  // Return focus to the original tab (guard against stale handle)
+  const handlesNow = await browser.getWindowHandles();
+  if (handlesNow.includes(originalHandle)) {
+    await browser.switchToWindow(originalHandle);
+  } else {
+    // fallback: switch to first remaining handle
+    await browser.switchToWindow(handlesNow[0]);
+  }
 
   return cachedChromeExtensionPath;
 };

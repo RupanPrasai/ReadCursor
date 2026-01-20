@@ -9,6 +9,12 @@ import {
 describe('ReadCursor - injection', () => {
   it('injects into the page and stays singleton on reinjection', async () => {
     await openFixture('basic-article');
+
+    console.log('[E2E] after openFixture url =', await browser.getUrl());
+    console.log('[E2E] title = ', await browser.getTitle());
+
+    await browser.pause(15000);
+
     const pageHandle = await browser.getWindowHandle();
 
     const { popupHandle } = await openPopupInNewTab();

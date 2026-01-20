@@ -89,6 +89,8 @@ const chromeCapabilities = {
       '--no-sandbox',
       '--disable-dev-shm-usage',
 
+      '--disable-popup-blocking',
+
       // critical: avoids profile lock / corrupted temp profile crashes
       `--user-data-dir=${chromeUserDataDir}`,
 

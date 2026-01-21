@@ -56,8 +56,14 @@ describe('ReadCursor - start-from-here', () => {
       { timeout: 10000, timeoutMsg: 'Expected target block to have a non-zero --hl-width' },
     );
 
-    // Panel should show Playing
-    const playingChip = await host.shadow$('span[aria-label="Reader status: Playing"]');
-    await playingChip.waitForExist({ timeout: 10000 });
+    // Panel should show Playing (avoid WDIO shadow element handles)
+    await browser.waitUntil(
+      async () =>
+        await browser.execute((h: any) => {
+          const sr = h?.shadowRoot as ShadowRoot | undefined;
+          return !!sr?.querySelector('span[aria-label="Reader status: Playing"]');
+        }, host),
+      { timeout: 10000, timeoutMsg: 'Expected Reader status: Playing chip to exist' },
+    );
   });
 });

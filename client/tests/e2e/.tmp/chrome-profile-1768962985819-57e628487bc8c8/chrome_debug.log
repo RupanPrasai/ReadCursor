@@ -1,0 +1,35 @@
+[68058:68197:0120/203629.692429:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[68058:68197:0120/203629.698514:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[68058:68197:0120/203629.698528:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[68058:68197:0120/203629.698535:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[68058:68058:0120/203629.799505:WARNING:chrome/browser/signin/account_consistency_mode_manager.cc:74] Desktop Identity Consistency cannot be enabled as no OAuth client ID and client secret have been configured.
+[68058:68197:0120/203629.832039:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[68058:68197:0120/203630.032259:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[68058:68197:0120/203630.050723:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[68058:68197:0120/203630.050799:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[68058:68058:0120/203630.217142:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[68058:68058:0120/203630.228307:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[68058:68058:0120/203630.267877:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[68058:68197:0120/203630.268163:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[68058:68058:0120/203630.294557:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[68058:68197:0120/203630.295512:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[68058:68058:0120/203630.303750:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.Properties.GetAll: object_path= /org/freedesktop/UPower/devices/DisplayDevice: org.freedesktop.DBus.Error.ServiceUnknown: The name org.freedesktop.UPower was not provided by any .service files
+[68058:68058:0120/203630.303828:WARNING:dbus/property.cc:174] GetAll request failed for: org.freedesktop.UPower.Device
+[68058:68058:0120/203630.316183:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[68058:68197:0120/203630.316285:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[68058:68058:0120/203630.321093:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[68058:68197:0120/203630.321165:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[68058:68058:0120/203630.330356:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[68058:68058:0120/203630.330390:WARNING:ui/base/idle/idle_linux.cc:98] None of the known D-Bus ScreenSaver services could be used.
+[68058:68058:0120/203630.438390:INFO:CONSOLE:106] "Background loaded", source: chrome-extension://pbbfjnjjognjkedklpcakephpmcgpgkf/background.js (106)
+[68058:68058:0120/203630.438741:INFO:CONSOLE:107] "Edit 'chrome-extension/src/background/index.ts' and save to reload.", source: chrome-extension://pbbfjnjjognjkedklpcakephpmcgpgkf/background.js (107)
+[68058:68058:0120/203630.439166:INFO:CONSOLE:71] "theme [object Object]", source: chrome-extension://pbbfjnjjognjkedklpcakephpmcgpgkf/background.js (71)
+[68058:68058:0120/203630.568205:INFO:CONSOLE:1018] "Launching Mapper instance with selfTargetId: 55F00923BCE9DBA825CFA90A69A85242", source:  (1018)
+[68273:68273:0120/203630.589364:ERROR:components/viz/service/main/viz_main_impl.cc:189] Exiting GPU process due to errors during initialization
+[68058:68058:0120/203630.681540:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:732] Message 0 rejected by interface blink.mojom.WidgetHost
+[68407:68407:0120/203630.704309:WARNING:ui/gfx/linux/gpu_memory_buffer_support_x11.cc:49] dri3 extension not supported.
+[68407:68407:0120/203630.705792:WARNING:sandbox/policy/linux/sandbox_linux.cc:404] InitializeSandbox() called with multiple threads in process gpu-process.
+[68366:68373:0120/203630.727584:ERROR:gpu/ipc/client/command_buffer_proxy_impl.cc:122] ContextResult::kTransientFailure: Failed to send GpuControl.CreateCommandBuffer.
+[68058:68058:0120/203631.654490:INFO:CONSOLE:331] "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold", source: chrome-extension://pbbfjnjjognjkedklpcakephpmcgpgkf/content-runtime/readerApp.iife.js (331)
+[68058:68058:0120/203631.655359:INFO:CONSOLE:380] "[ReadCursor] Global listeners attached", source: chrome-extension://pbbfjnjjognjkedklpcakephpmcgpgkf/content-runtime/readerApp.iife.js (380)
+[68058:68058:0120/203631.663597:INFO:CONSOLE:380] "[ReadCursor] Reader Panel successfully initialized", source: chrome-extension://pbbfjnjjognjkedklpcakephpmcgpgkf/content-runtime/readerApp.iife.js (380)

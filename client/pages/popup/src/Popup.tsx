@@ -28,8 +28,6 @@ const Popup = () => {
     url.startsWith('data:');
 
   const pickInjectionTab = async () => {
-    const tabs = await chrome.tabs.query({ currentWindow: true });
-
     const extBase = chrome.runtime.getURL(''); // chrome-extension://<id>/
     const isHttp = (url: string) => url.startsWith('http://') || url.startsWith('https://');
 
@@ -43,23 +41,34 @@ const Popup = () => {
       return true;
     };
 
-    const active = tabs.find(t => t.active);
-    if (active?.url) {
-      // If active is a blocked system page, do not inject elsewhere.
-      if (isBlockedInjectUrl(active.url)) return null;
+    const choose = (tabs: chrome.tabs.Tab[]) => {
+      const active = tabs.find(t => t.active);
+      if (active && isInjectable(active)) return active;
+      return tabs.find(isInjectable) ?? null;
+    };
 
-      // Normal case: active is a normal page, inject into it.
-      if (isInjectable(active)) return active;
+    const tabsThisWindow = await chrome.tabs.query({ currentWindow: true });
+    const activeThisWindow = tabsThisWindow.find(t => t.active);
 
-      // E2E case: active is the popup opened as a tab (extension page), fallback allowed.
-      if (active.url.startsWith(extBase)) {
-        return tabs.find(isInjectable) ?? null;
+    if (activeThisWindow?.url) {
+      // If user is on a blocked page, do nothing.
+      if (isBlockedInjectUrl(activeThisWindow.url)) return null;
+
+      // Normal popup case: active tab is the page you want.
+      if (isInjectable(activeThisWindow)) return activeThisWindow;
+
+      // E2E case: popup opened as a tab/window => currentWindow is "the popup window".
+      // Scan all tabs to find the fixture (http://127.0.0.1/...)
+      if (activeThisWindow.url.startsWith(extBase)) {
+        const allTabs = await chrome.tabs.query({});
+        return choose(allTabs);
       }
 
       return null;
     }
 
-    return null;
+    // No active? just pick first injectable in the current window
+    return choose(tabsThisWindow);
   };
 
   const injectContentScript = async () => {

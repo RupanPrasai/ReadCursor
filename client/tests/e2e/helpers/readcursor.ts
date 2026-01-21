@@ -1,6 +1,10 @@
 const HOST_MARKER = 'data-readcursor-e2e-host';
+const RC_ROOT_ID = '__ROOT_READERPANEL__';
 
 type WinInfo = { handle: string; url: string; title?: string };
+
+const isPopupUrl = (u: string, popupUrl: string) =>
+  u === popupUrl || u.startsWith(`${popupUrl}#`) || u.startsWith(`${popupUrl}?`);
 
 const listWindows = async (): Promise<WinInfo[]> => {
   const out: WinInfo[] = [];
@@ -19,74 +23,50 @@ const listWindows = async (): Promise<WinInfo[]> => {
   return out;
 };
 
-const isPopupUrl = (u: string, popupUrl: string) =>
-  u === popupUrl || u.startsWith(`${popupUrl}#`) || u.startsWith(`${popupUrl}?`);
-
 export const openPopupInNewTab = async () => {
-  // IMPORTANT: call this while the fixture tab is focused
   const extensionPath = await browser.getExtensionPath();
   const popupUrl = `${extensionPath}/popup/index.html`;
 
   const openerHandle = await browser.getWindowHandle();
-
-  // Prefer window.open to keep it in the same Chrome window (so currentWindow tab queries can still see the fixture).
   const before = new Set(await browser.getWindowHandles());
-  await browser.execute((url: string) => window.open(url, '_blank'), popupUrl);
 
-  // Wait for a new handle OR the popup URL to appear somewhere
-  let popupHandle: string | null = null;
+  // Create a real browser tab/window via WebDriver (allowed)
+  await browser.newWindow('about:blank');
 
-  try {
-    await browser.waitUntil(
-      async () => {
-        const handles = await browser.getWindowHandles();
+  // Identify the newly created handle
+  await browser.waitUntil(async () => (await browser.getWindowHandles()).length > before.size, {
+    timeout: 1500,
+    timeoutMsg: `Popup tab/window not created (about:blank)`,
+  });
 
-        // If a new handle appears, great, but don't assume it's the popup yet.
-        if (handles.length > before.size) {
-          // keep going; we'll confirm by URL below
-        }
-
-        // Find by URL (most reliable)
-        for (const h of handles) {
-          await browser.switchToWindow(h);
-          const u = await browser.getUrl();
-          if (isPopupUrl(u, popupUrl)) {
-            popupHandle = h;
-            return true;
-          }
-        }
-        return false;
-      },
-      { timeout: 20000, timeoutMsg: `Popup handle not found by URL: ${popupUrl}` },
-    );
-  } catch {
-    const diag = await listWindows();
-    console.log('[E2E] openPopupInNewTab diagnostics:', JSON.stringify(diag, null, 2));
-    throw new Error(`Popup handle not found by URL: ${popupUrl}`);
-  }
+  const after = await browser.getWindowHandles();
+  const popupHandle = after.find(h => !before.has(h)) ?? null;
 
   if (!popupHandle) {
     const diag = await listWindows();
-    console.log('[E2E] openPopupInNewTab: missing popupHandle:', JSON.stringify(diag, null, 2));
-    throw new Error('Popup handle not found');
+    console.log('[E2E] openPopupInNewTab: missing new handle:', JSON.stringify(diag, null, 2));
+    throw new Error('Popup handle not found after newWindow(about:blank)');
   }
 
   await browser.switchToWindow(popupHandle);
 
-  // Ensure we really are on the popup URL (sometimes it briefly shows about:blank)
-  await browser.waitUntil(
-    async () => {
-      const u = await browser.getUrl();
-      return isPopupUrl(u, popupUrl);
-    },
-    {
-      timeout: 10000,
-      timeoutMsg: `Popup URL mismatch (expected ${popupUrl}, got ${await browser.getUrl()})`,
-    },
-  );
+  // Navigate via WebDriver (not window.open) to avoid Chromium blocking
+  await browser.url(popupUrl);
 
-  // UI exists
-  await $('button=Open Read Cursor').waitForExist({ timeout: 10000 });
+  await browser.waitUntil(async () => isPopupUrl(await browser.getUrl(), popupUrl), {
+    timeout: 15000,
+    timeoutMsg: `Popup URL mismatch (expected ${popupUrl}, got ${await browser.getUrl()})`,
+  });
+
+  const currentUrl = await browser.getUrl();
+  if (!currentUrl.startsWith('chrome-extension://')) {
+    const diag = await listWindows();
+    console.log('[E2E] openPopupInNewTab diagnostics:', JSON.stringify(diag, null, 2));
+    throw new Error(`Popup did not land on chrome-extension:// (got ${currentUrl})`);
+  }
+
+  // Popup should be loaded; keep the old wait for stability across builds.
+  await $('button=Open Read Cursor').waitForExist({ timeout: 15000 });
 
   return { popupUrl, popupHandle, openerHandle };
 };
@@ -96,38 +76,110 @@ export const clickOpenReadCursor = async () => {
   await btn.waitForClickable();
   await btn.click();
 
-  // Try to observe the busy flip (don’t fail if it was too fast to catch)
   await browser
     .waitUntil(async () => (await btn.getAttribute('aria-busy')) === 'true', { timeout: 1000 })
-    .catch(() => { });
+    .catch(() => {
+      // ignore if too fast
+    });
 
-  // Then wait for injection to finish
   await browser.waitUntil(async () => (await btn.getAttribute('aria-busy')) !== 'true', {
     timeout: 15000,
     timeoutMsg: 'Popup inject button stayed busy too long',
   });
 };
 
-export const countReadCursorInstances = async () =>
-  await browser.execute(() => {
-    let count = 0;
-    const all = Array.from(document.querySelectorAll('*')) as HTMLElement[];
+/**
+ * E2E-only injection that bypasses popup "activeTab" semantics.
+ * Requires:
+ * - E2E build manifest to include host_permissions for the fixture origin
+ * - background to implement RC_E2E_INJECT
+ *
+ * IMPORTANT: Call this from an extension page context (popup/options).
+ */
+export const e2eInjectIntoFixture = async (urlPrefix: string) => {
+  const result = await browser.executeAsync((prefix: string, done: (out: any) => void) => {
+    try {
+      chrome.runtime.sendMessage({ type: 'RC_E2E_INJECT', urlPrefix: prefix }, resp => {
+        const lastErr = chrome.runtime.lastError?.message ?? null;
+        done({ resp, lastErr });
+      });
+    } catch (e: any) {
+      done({ resp: null, lastErr: String(e?.message ?? e) });
+    }
+  }, urlPrefix);
 
-    for (const el of all) {
+  if (result?.lastErr) {
+    throw new Error(`RC_E2E_INJECT runtime error: ${result.lastErr}`);
+  }
+  if (!result?.resp?.ok) {
+    throw new Error(`RC_E2E_INJECT failed: ${result?.resp?.error ?? 'unknown error'}`);
+  }
+
+  return result.resp as { ok: true; tabId: number };
+};
+
+export const countReadCursorInstances = async () =>
+  await browser.execute((rootId: string) => {
+    const nodes = Array.from(document.querySelectorAll(`#${CSS.escape(rootId)}`)) as HTMLElement[];
+    let count = 0;
+
+    for (const el of nodes) {
       const sr = (el as any).shadowRoot as ShadowRoot | undefined;
       if (sr && sr.querySelector('.app-container')) count++;
     }
+
+    // Fallback for older builds: scan any shadowRoot for .app-container
+    if (count === 0) {
+      const all = Array.from(document.querySelectorAll('*')) as HTMLElement[];
+      for (const el of all) {
+        const sr = (el as any).shadowRoot as ShadowRoot | undefined;
+        if (sr && sr.querySelector('.app-container')) count++;
+      }
+    }
+
     return count;
-  });
+  }, RC_ROOT_ID);
 
 export const waitForReadCursorHost = async () => {
   try {
-    await browser.waitUntil(async () => (await countReadCursorInstances()) >= 1, {
-      timeout: 20000,
-      timeoutMsg: 'ReadCursor shadow host not found (no .app-container in any shadowRoot)',
-    });
+    await browser.waitUntil(
+      async () =>
+        (await browser.execute((rootId: string) => {
+          const els = Array.from(document.querySelectorAll(`#${CSS.escape(rootId)}`)) as HTMLElement[];
+          if (!els.length) return false;
+
+          // If duplicates exist (bad but possible), accept first with mounted app
+          for (const el of els) {
+            const sr = (el as any).shadowRoot as ShadowRoot | undefined;
+            if (sr && sr.querySelector('.app-container')) return true;
+          }
+          return false;
+        }, RC_ROOT_ID)) === true,
+      {
+        timeout: 20000,
+        timeoutMsg: `ReadCursor host not found (#${RC_ROOT_ID} with .app-container in shadowRoot)`,
+      },
+    );
   } catch {
-    const diag = await browser.execute(() => {
+    const diag = await browser.execute((rootId: string) => {
+      const els = Array.from(document.querySelectorAll(`#${CSS.escape(rootId)}`)) as HTMLElement[];
+      const info = els.map(el => {
+        const sr = (el as any).shadowRoot as ShadowRoot | undefined;
+        return {
+          tag: el.tagName,
+          id: el.id || null,
+          hasShadowRoot: !!sr,
+          hasAppContainer: !!sr?.querySelector('.app-container'),
+        };
+      });
+
+      // Useful globals set by your runtime
+      const globals = {
+        readerPanelGuiActive: (window as any).readerPanelGuiActive ?? null,
+        hasSingleton: !!(window as any).__READCURSOR_SINGLETON__,
+      };
+
+      // General shadowRoot sampling (for debugging if ROOT_ID ever changes)
       const all = Array.from(document.querySelectorAll('*')) as HTMLElement[];
       const shadowHosts = all.filter(el => (el as any).shadowRoot) as HTMLElement[];
 
@@ -143,29 +195,46 @@ export const waitForReadCursorHost = async () => {
 
       return {
         href: location.href,
-        lightDomHasAppContainer: !!document.querySelector('.app-container'),
+        rootId,
+        rootMatches: els.length,
+        rootInfo: info,
+        globals,
         shadowHostCount: shadowHosts.length,
         sample,
       };
-    });
+    }, RC_ROOT_ID);
 
-    throw new Error(`ReadCursor shadow host not found. Diagnostics: ${JSON.stringify(diag)}`);
+    throw new Error(`ReadCursor host not found. Diagnostics: ${JSON.stringify(diag)}`);
   }
 
-  // Tag the host so we can select it deterministically
-  await browser.execute((marker: string) => {
-    const existing = document.querySelector(`[${marker}="1"]`);
-    if (existing) return;
+  // Tag the host for convenience
+  await browser.execute(
+    (marker: string, rootId: string) => {
+      const existing = document.querySelector(`[${marker}="1"]`);
+      if (existing) return;
 
-    const all = Array.from(document.querySelectorAll('*')) as HTMLElement[];
-    for (const el of all) {
-      const sr = (el as any).shadowRoot as ShadowRoot | undefined;
-      if (sr && sr.querySelector('.app-container')) {
-        el.setAttribute(marker, '1');
-        return;
+      const els = Array.from(document.querySelectorAll(`#${CSS.escape(rootId)}`)) as HTMLElement[];
+      for (const el of els) {
+        const sr = (el as any).shadowRoot as ShadowRoot | undefined;
+        if (sr && sr.querySelector('.app-container')) {
+          el.setAttribute(marker, '1');
+          return;
+        }
       }
-    }
-  }, HOST_MARKER);
+
+      // Fallback: tag any host with .app-container
+      const all = Array.from(document.querySelectorAll('*')) as HTMLElement[];
+      for (const el of all) {
+        const sr = (el as any).shadowRoot as ShadowRoot | undefined;
+        if (sr && sr.querySelector('.app-container')) {
+          el.setAttribute(marker, '1');
+          return;
+        }
+      }
+    },
+    HOST_MARKER,
+    RC_ROOT_ID,
+  );
 
   const host = await $(`[${HOST_MARKER}="1"]`);
   await host.waitForExist();
@@ -185,7 +254,7 @@ export const dragBy = async (el: WebdriverIO.Element, dx: number, dy: number) =>
       actions: [
         { type: 'pointerMove', duration: 0, x: startX, y: startY },
         { type: 'pointerDown', button: 0 },
-        { type: 'pointerMove', duration: 150, x: startX + dx, y: startY + dy },
+        { type: 'pointerMove', duration: 100, x: startX + dx, y: startY + dy },
         { type: 'pointerUp', button: 0 },
       ],
     },

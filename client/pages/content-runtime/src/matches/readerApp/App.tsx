@@ -26,6 +26,23 @@ function getViewportSignature(): string {
   return parts.join('|');
 }
 
+function isE2EBuild(): boolean {
+  try {
+    const vn = (globalThis as any)?.chrome?.runtime?.getManifest?.()?.version_name;
+    return typeof vn === 'string' && vn.includes('-e2e');
+  } catch {
+    return false;
+  }
+}
+
+function bumpDocCounter(datasetKey: 'rcE2eInit' | 'rcE2eDispose'): number {
+  const el = document.documentElement;
+  const raw = el.dataset[datasetKey];
+  const next = (raw ? Number(raw) : 0) + 1;
+  el.dataset[datasetKey] = String(next);
+  return next;
+}
+
 export default function App({ destroyCallback, wordGeometry }: AppProps) {
   const [controller] = useState(() => new ReaderController());
 
@@ -37,6 +54,21 @@ export default function App({ destroyCallback, wordGeometry }: AppProps) {
   const lastSigRef = useRef<string | null>(null);
   const rebuildTimerRef = useRef<number | null>(null);
   const rebuildInFlightRef = useRef(false);
+
+  useEffect(() => {
+    if (!isE2EBuild()) return;
+
+    // visible from page world via DOM attributes (WDIO browser.execute)
+    const initN = bumpDocCounter('rcE2eInit');
+
+    const host = document.getElementById('__ROOT_READERPANEL__');
+    if (host) host.setAttribute('data-rc-instance', String(initN));
+
+    return () => {
+      if (!isE2EBuild()) return;
+      bumpDocCounter('rcE2eDispose');
+    };
+  }, []);
 
   const clearRebuildTimer = useCallback(() => {
     if (rebuildTimerRef.current != null) {

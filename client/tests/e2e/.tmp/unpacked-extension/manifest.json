@@ -3,6 +3,7 @@
   "default_locale": "en",
   "name": "__MSG_extensionName__",
   "version": "1.0.0",
+  "version_name": "1.0.0-e2e",
   "description": "__MSG_extensionDescription__",
   "permissions": [
     "storage",
@@ -11,6 +12,10 @@
     "activeTab",
     "notifications",
     "tabs"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1/*",
+    "http://localhost/*"
   ],
   "options_page": "options/index.html",
   "background": {
@@ -31,9 +36,5 @@
     "32": "icon32.png",
     "48": "icon48.png",
     "128": "icon128.png"
-  },
-  "host_permissions": [
-    "http://127.0.0.1/*",
-    "http://localhost/*"
-  ]
+  }
 }

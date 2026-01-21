@@ -2,72 +2,72 @@ var l;
 (function(e) {
   e.Local = "local", e.Sync = "sync", e.Managed = "managed", e.Session = "session";
 })(l || (l = {}));
-var g;
+var E;
 (function(e) {
   e.ExtensionPagesOnly = "TRUSTED_CONTEXTS", e.ExtensionPagesAndContentScripts = "TRUSTED_AND_UNTRUSTED_CONTEXTS";
-})(g || (g = {}));
-const n = globalThis.chrome, E = async (e, r) => {
-  const s = (i) => typeof i == "function", a = (i) => (
+})(E || (E = {}));
+const a = globalThis.chrome, S = async (e, n) => {
+  const s = (o) => typeof o == "function", r = (o) => (
     // Use ReturnType to infer the return type of the function and check if it's a Promise
-    i instanceof Promise
+    o instanceof Promise
   );
-  return s(e) ? (a(e), e(r)) : e;
+  return s(e) ? (r(e), e(n)) : e;
 };
-let L = !1;
-const C = (e) => {
-  if (n && !n.storage[e])
+let _ = !1;
+const T = (e) => {
+  if (a && !a.storage[e])
     throw new Error(`"storage" permission in manifest.ts: "storage ${e}" isn't defined`);
-}, f = (e, r, s) => {
-  var S, T;
-  let a = null, i = !1, c = [];
-  const o = (s == null ? void 0 : s.storageEnum) ?? l.Local, w = ((S = s == null ? void 0 : s.serialization) == null ? void 0 : S.serialize) ?? ((t) => t), m = ((T = s == null ? void 0 : s.serialization) == null ? void 0 : T.deserialize) ?? ((t) => t);
-  L === !1 && o === l.Session && (s == null ? void 0 : s.sessionAccessForContentScripts) === !0 && (C(o), n == null || n.storage[o].setAccessLevel({
-    accessLevel: g.ExtensionPagesAndContentScripts
+}, A = (e, n, s) => {
+  var m, f;
+  let r = null, o = !1, i = [];
+  const c = (s == null ? void 0 : s.storageEnum) ?? l.Local, w = ((m = s == null ? void 0 : s.serialization) == null ? void 0 : m.serialize) ?? ((t) => t), g = ((f = s == null ? void 0 : s.serialization) == null ? void 0 : f.deserialize) ?? ((t) => t);
+  _ === !1 && c === l.Session && (s == null ? void 0 : s.sessionAccessForContentScripts) === !0 && (T(c), a == null || a.storage[c].setAccessLevel({
+    accessLevel: E.ExtensionPagesAndContentScripts
   }).catch((t) => {
     console.error(t), console.error("Please call .setAccessLevel() into different context, like a background script.");
-  }), L = !0);
-  const u = async () => {
-    C(o);
-    const t = await (n == null ? void 0 : n.storage[o].get([e]));
-    return t ? m(t[e]) ?? r : r;
-  }, x = async (t) => {
-    i || (a = await u()), a = await E(t, a), await (n == null ? void 0 : n.storage[o].set({ [e]: w(a) })), h();
-  }, p = (t) => (c = [...c, t], () => {
-    c = c.filter((d) => d !== t);
-  }), y = () => a, h = () => {
-    c.forEach((t) => t());
-  }, A = async (t) => {
+  }), _ = !0);
+  const d = async () => {
+    T(c);
+    const t = await (a == null ? void 0 : a.storage[c].get([e]));
+    return t ? g(t[e]) ?? n : n;
+  }, L = async (t) => {
+    o || (r = await d()), r = await S(t, r), await (a == null ? void 0 : a.storage[c].set({ [e]: w(r) })), h();
+  }, p = (t) => (i = [...i, t], () => {
+    i = i.filter((u) => u !== t);
+  }), x = () => r, h = () => {
+    i.forEach((t) => t());
+  }, y = async (t) => {
     if (t[e] === void 0)
       return;
-    const d = m(t[e].newValue);
-    a !== d && (a = await E(d, a), h());
+    const u = g(t[e].newValue);
+    r !== u && (r = await S(u, r), h());
   };
-  return u().then((t) => {
-    a = t, i = !0, h();
-  }), n == null || n.storage[o].onChanged.addListener(A), {
-    get: u,
-    set: x,
-    getSnapshot: y,
+  return d().then((t) => {
+    r = t, o = !0, h();
+  }), a == null || a.storage[c].onChanged.addListener(y), {
+    get: d,
+    set: L,
+    getSnapshot: x,
     subscribe: p
   };
-}, _ = f("theme-storage-key", {
+}, C = A("theme-storage-key", {
   theme: "light",
   isLight: !0
 }, {
   storageEnum: l.Local
-}), P = {
-  ..._,
+}), I = {
+  ...C,
   toggle: async () => {
-    await _.set((e) => {
-      const r = e.theme === "light" ? "dark" : "light";
+    await C.set((e) => {
+      const n = e.theme === "light" ? "dark" : "light";
       return {
-        theme: r,
-        isLight: r === "light"
+        theme: n,
+        isLight: n === "light"
       };
     });
   }
 };
-P.get().then((e) => {
+I.get().then((e) => {
   console.log("theme", e);
 });
 chrome.runtime.onInstalled.addListener(() => {
@@ -77,11 +77,31 @@ chrome.runtime.onInstalled.addListener(() => {
     contexts: ["selection", "page"]
   });
 });
-chrome.contextMenus.onClicked.addListener(async (e, r) => {
-  e.menuItemId === "readcursor_start_here" && r != null && r.id && chrome.tabs.sendMessage(r.id, {
+chrome.contextMenus.onClicked.addListener(async (e, n) => {
+  e.menuItemId === "readcursor_start_here" && n != null && n.id && chrome.tabs.sendMessage(n.id, {
     type: "START_FROM_SELECTION",
     ts: Date.now()
   });
+});
+const P = () => (chrome.runtime.getManifest().version_name ?? "").includes("-e2e");
+chrome.runtime.onMessage.addListener((e, n, s) => {
+  if ((e == null ? void 0 : e.type) !== "RC_E2E_INJECT") return;
+  if (!P()) {
+    s({ ok: !1, error: "RC_E2E_INJECT rejected: not an E2E build" });
+    return;
+  }
+  const { urlPrefix: r } = e;
+  return (async () => {
+    const i = (await chrome.tabs.query({})).find((c) => typeof c.url == "string" && c.url.startsWith(r));
+    if (!(i != null && i.id))
+      throw new Error(`RC_E2E_INJECT: no tab found with urlPrefix="${r}"`);
+    await chrome.scripting.executeScript({
+      target: { tabId: i.id },
+      files: ["content-runtime/readerApp.iife.js"]
+    }), s({ ok: !0, tabId: i.id });
+  })().catch((o) => {
+    s({ ok: !1, error: (o == null ? void 0 : o.message) ?? String(o) });
+  }), !0;
 });
 console.log("Background loaded");
 console.log("Edit 'chrome-extension/src/background/index.ts' and save to reload.");

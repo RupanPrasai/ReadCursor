@@ -62,11 +62,14 @@ const patchManifestForE2E = async (dir: string) => {
   const manifestPath = join(dir, 'manifest.json');
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
 
+  // Mark as E2E so background can safely enable E2E-only hooks.
+  manifest.version_name = `${manifest.version ?? '0.0.0'}-e2e`;
+
   manifest.host_permissions = Array.from(
     new Set([...(manifest.host_permissions ?? []), 'http://127.0.0.1/*', 'http://localhost/*']),
   );
 
-  // optional but helpful (tab.url access etc.)
+  // required for background to read tab.url and locate fixture tab by URL prefix
   manifest.permissions = Array.from(new Set([...(manifest.permissions ?? []), 'tabs']));
 
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2));

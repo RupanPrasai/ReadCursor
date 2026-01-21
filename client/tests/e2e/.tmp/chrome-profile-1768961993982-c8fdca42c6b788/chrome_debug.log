@@ -1,0 +1,39 @@
+[37499:37617:0120/201957.804960:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[37499:37617:0120/201957.805110:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[37499:37617:0120/201957.805126:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[37499:37617:0120/201957.805139:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[37499:37499:0120/201957.858471:WARNING:chrome/browser/signin/account_consistency_mode_manager.cc:74] Desktop Identity Consistency cannot be enabled as no OAuth client ID and client secret have been configured.
+[37499:37617:0120/201957.872932:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[37499:37617:0120/201958.026711:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[37499:37617:0120/201958.057165:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[37499:37617:0120/201958.058085:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[37499:37499:0120/201958.159486:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[37499:37499:0120/201958.164372:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[37672:37672:0120/201958.162547:ERROR:components/viz/service/main/viz_main_impl.cc:189] Exiting GPU process due to errors during initialization
+[37499:37499:0120/201958.179918:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[37499:37617:0120/201958.180091:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[37499:37499:0120/201958.223155:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[37499:37617:0120/201958.223239:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[37499:37499:0120/201958.226700:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.Properties.GetAll: object_path= /org/freedesktop/UPower/devices/DisplayDevice: org.freedesktop.DBus.Error.ServiceUnknown: The name org.freedesktop.UPower was not provided by any .service files
+[37499:37499:0120/201958.226750:WARNING:dbus/property.cc:174] GetAll request failed for: org.freedesktop.UPower.Device
+[37499:37499:0120/201958.243346:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[37499:37617:0120/201958.243435:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[37499:37499:0120/201958.257068:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[37499:37617:0120/201958.259734:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[37499:37499:0120/201958.264488:ERROR:dbus/object_proxy.cc:573] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[37499:37499:0120/201958.264652:WARNING:ui/base/idle/idle_linux.cc:98] None of the known D-Bus ScreenSaver services could be used.
+[37773:37773:0120/201958.380269:ERROR:components/viz/service/main/viz_main_impl.cc:189] Exiting GPU process due to errors during initialization
+[37499:37499:0120/201958.387050:INFO:CONSOLE:106] "Background loaded", source: chrome-extension://pbbfjnjjognjkedklpcakephpmcgpgkf/background.js (106)
+[37499:37499:0120/201958.387237:INFO:CONSOLE:107] "Edit 'chrome-extension/src/background/index.ts' and save to reload.", source: chrome-extension://pbbfjnjjognjkedklpcakephpmcgpgkf/background.js (107)
+[37499:37499:0120/201958.410747:INFO:CONSOLE:71] "theme [object Object]", source: chrome-extension://pbbfjnjjognjkedklpcakephpmcgpgkf/background.js (71)
+[37499:37499:0120/201958.415268:INFO:CONSOLE:1018] "Launching Mapper instance with selfTargetId: CAD5360FB6855E588964776D25010AF4", source:  (1018)
+[37818:37818:0120/201958.554222:ERROR:components/viz/service/main/viz_main_impl.cc:189] Exiting GPU process due to errors during initialization
+[37851:37851:0120/201958.705935:WARNING:ui/gfx/linux/gpu_memory_buffer_support_x11.cc:49] dri3 extension not supported.
+[37851:37851:0120/201958.707061:WARNING:sandbox/policy/linux/sandbox_linux.cc:404] InitializeSandbox() called with multiple threads in process gpu-process.
+[37776:37782:0120/201958.722618:ERROR:gpu/ipc/client/command_buffer_proxy_impl.cc:122] ContextResult::kTransientFailure: Failed to send GpuControl.CreateCommandBuffer.
+[37792:37800:0120/201958.728849:ERROR:gpu/ipc/client/command_buffer_proxy_impl.cc:122] ContextResult::kTransientFailure: Failed to send GpuControl.CreateCommandBuffer.
+[37844:37854:0120/201958.797857:ERROR:gpu/ipc/client/command_buffer_proxy_impl.cc:122] ContextResult::kTransientFailure: Failed to send GpuControl.CreateCommandBuffer.
+[37499:37499:0120/201959.462141:INFO:CONSOLE:331] "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold", source: chrome-extension://pbbfjnjjognjkedklpcakephpmcgpgkf/content-runtime/readerApp.iife.js (331)
+[37499:37499:0120/201959.463958:INFO:CONSOLE:380] "[ReadCursor] Global listeners attached", source: chrome-extension://pbbfjnjjognjkedklpcakephpmcgpgkf/content-runtime/readerApp.iife.js (380)
+[37499:37499:0120/201959.471209:INFO:CONSOLE:380] "[ReadCursor] Reader Panel successfully initialized", source: chrome-extension://pbbfjnjjognjkedklpcakephpmcgpgkf/content-runtime/readerApp.iife.js (380)
+[37499:37620:0120/202000.696695:ERROR:google_apis/gcm/engine/registration_request.cc:292] Registration response error message: QUOTA_EXCEEDED

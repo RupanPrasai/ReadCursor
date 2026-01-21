@@ -1,13 +1,17 @@
 import { openFixture } from '../../helpers/fixtures.js';
-import { openPopupInNewTab, clickOpenReadCursor, waitForReadCursorHost, dragBy } from '../../helpers/readcursor.js';
+import { openPopupInNewTab, e2eInjectIntoFixture, waitForReadCursorHost, dragBy } from '../../helpers/readcursor.js';
 
 describe('ReadCursor - ReaderPanel interactions', () => {
   it('can play/pause, change WPM, drag, and minimize/restore', async () => {
     await openFixture('basic-article');
     const pageHandle = await browser.getWindowHandle();
 
-    await openPopupInNewTab();
-    await clickOpenReadCursor();
+    const fixtureUrl = await browser.getUrl();
+    const fixtureOrigin = new URL(fixtureUrl).origin;
+
+    const { popupHandle } = await openPopupInNewTab();
+    await browser.switchToWindow(popupHandle);
+    await e2eInjectIntoFixture(fixtureOrigin);
 
     await browser.switchToWindow(pageHandle);
     const host = await waitForReadCursorHost();
@@ -27,12 +31,14 @@ describe('ReadCursor - ReaderPanel interactions', () => {
     const wpmInput = await host.shadow$('input[aria-label="WPM input"]');
     await expect(wpmInput).toHaveValue('200');
 
-    // Drag panel
+    // Drag panel (use drag bar)
     const dragBar = await host.shadow$('[aria-label="Drag reader panel"]');
     await dragBar.waitForExist();
+
     const before = await dragBar.getLocation();
     await dragBy(dragBar, 80, 40);
     const after = await dragBar.getLocation();
+
     await expect(after.x).toBeGreaterThan(before.x + 10);
     await expect(after.y).toBeGreaterThan(before.y + 10);
 
@@ -48,6 +54,9 @@ describe('ReadCursor - ReaderPanel interactions', () => {
     await restoreBtn.waitForClickable();
     await restoreBtn.click();
 
-    await dragBar.waitForExist();
+    // IMPORTANT: re-query after mode switch (old handles can go stale)
+    const dragBar2 = await host.shadow$('[aria-label="Drag reader panel"]');
+    await dragBar2.waitForExist();
   });
 });
+

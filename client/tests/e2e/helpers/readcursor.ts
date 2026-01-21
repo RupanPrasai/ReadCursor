@@ -1,5 +1,4 @@
 const HOST_MARKER = 'data-readcursor-e2e-host';
-const RC_ROOT_ID = '__ROOT_READERPANEL__';
 
 type WinInfo = { handle: string; url: string; title?: string };
 
@@ -30,10 +29,9 @@ export const openPopupInNewTab = async () => {
   const openerHandle = await browser.getWindowHandle();
   const before = new Set(await browser.getWindowHandles());
 
-  // Create a real browser tab/window via WebDriver (allowed)
+  // Create a real browser tab/window via WebDriver
   await browser.newWindow('about:blank');
 
-  // Identify the newly created handle
   await browser.waitUntil(async () => (await browser.getWindowHandles()).length > before.size, {
     timeout: 1500,
     timeoutMsg: `Popup tab/window not created (about:blank)`,
@@ -65,12 +63,42 @@ export const openPopupInNewTab = async () => {
     throw new Error(`Popup did not land on chrome-extension:// (got ${currentUrl})`);
   }
 
-  // Popup should be loaded; keep the old wait for stability across builds.
-  await $('button=Open Read Cursor').waitForExist({ timeout: 15000 });
+  // We do NOT wait for the "Open Read Cursor" button anymore.
+  // This tab is used as an extension context for chrome.runtime.sendMessage (E2E hooks).
 
   return { popupUrl, popupHandle, openerHandle };
 };
 
+/**
+ * E2E-only injection through background hook (avoids popup tab targeting issues).
+ * Must be called while focused on a chrome-extension:// page.
+ */
+export const e2eInjectIntoFixture = async (urlPrefix: string) => {
+  const res = await browser.executeAsync((prefix: string, done: (v: any) => void) => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const chromeAny = (globalThis as any).chrome;
+      if (!chromeAny?.runtime?.sendMessage) {
+        done({ ok: false, error: 'chrome.runtime.sendMessage unavailable (not in extension context?)' });
+        return;
+      }
+
+      chromeAny.runtime.sendMessage({ type: 'RC_E2E_INJECT', urlPrefix: prefix }, (reply: any) => {
+        const err = chromeAny.runtime.lastError;
+        if (err) done({ ok: false, error: String(err.message ?? err) });
+        else done(reply ?? { ok: false, error: 'no reply' });
+      });
+    } catch (e: any) {
+      done({ ok: false, error: String(e?.message ?? e) });
+    }
+  }, urlPrefix);
+
+  if (!res?.ok) {
+    throw new Error(`RC_E2E_INJECT failed: ${JSON.stringify(res)}`);
+  }
+};
+
+// Kept for future “popup UI smoke” tests. Don’t use this for injection anymore.
 export const clickOpenReadCursor = async () => {
   const btn = await $('button=Open Read Cursor');
   await btn.waitForClickable();
@@ -88,98 +116,25 @@ export const clickOpenReadCursor = async () => {
   });
 };
 
-/**
- * E2E-only injection that bypasses popup "activeTab" semantics.
- * Requires:
- * - E2E build manifest to include host_permissions for the fixture origin
- * - background to implement RC_E2E_INJECT
- *
- * IMPORTANT: Call this from an extension page context (popup/options).
- */
-export const e2eInjectIntoFixture = async (urlPrefix: string) => {
-  const result = await browser.executeAsync((prefix: string, done: (out: any) => void) => {
-    try {
-      chrome.runtime.sendMessage({ type: 'RC_E2E_INJECT', urlPrefix: prefix }, resp => {
-        const lastErr = chrome.runtime.lastError?.message ?? null;
-        done({ resp, lastErr });
-      });
-    } catch (e: any) {
-      done({ resp: null, lastErr: String(e?.message ?? e) });
-    }
-  }, urlPrefix);
-
-  if (result?.lastErr) {
-    throw new Error(`RC_E2E_INJECT runtime error: ${result.lastErr}`);
-  }
-  if (!result?.resp?.ok) {
-    throw new Error(`RC_E2E_INJECT failed: ${result?.resp?.error ?? 'unknown error'}`);
-  }
-
-  return result.resp as { ok: true; tabId: number };
-};
-
 export const countReadCursorInstances = async () =>
-  await browser.execute((rootId: string) => {
-    const nodes = Array.from(document.querySelectorAll(`#${CSS.escape(rootId)}`)) as HTMLElement[];
+  await browser.execute(() => {
     let count = 0;
-
-    for (const el of nodes) {
+    const all = Array.from(document.querySelectorAll('*')) as HTMLElement[];
+    for (const el of all) {
       const sr = (el as any).shadowRoot as ShadowRoot | undefined;
       if (sr && sr.querySelector('.app-container')) count++;
     }
-
-    // Fallback for older builds: scan any shadowRoot for .app-container
-    if (count === 0) {
-      const all = Array.from(document.querySelectorAll('*')) as HTMLElement[];
-      for (const el of all) {
-        const sr = (el as any).shadowRoot as ShadowRoot | undefined;
-        if (sr && sr.querySelector('.app-container')) count++;
-      }
-    }
-
     return count;
-  }, RC_ROOT_ID);
+  });
 
 export const waitForReadCursorHost = async () => {
   try {
-    await browser.waitUntil(
-      async () =>
-        (await browser.execute((rootId: string) => {
-          const els = Array.from(document.querySelectorAll(`#${CSS.escape(rootId)}`)) as HTMLElement[];
-          if (!els.length) return false;
-
-          // If duplicates exist (bad but possible), accept first with mounted app
-          for (const el of els) {
-            const sr = (el as any).shadowRoot as ShadowRoot | undefined;
-            if (sr && sr.querySelector('.app-container')) return true;
-          }
-          return false;
-        }, RC_ROOT_ID)) === true,
-      {
-        timeout: 20000,
-        timeoutMsg: `ReadCursor host not found (#${RC_ROOT_ID} with .app-container in shadowRoot)`,
-      },
-    );
+    await browser.waitUntil(async () => (await countReadCursorInstances()) >= 1, {
+      timeout: 20000,
+      timeoutMsg: 'ReadCursor shadow host not found (no .app-container in any shadowRoot)',
+    });
   } catch {
-    const diag = await browser.execute((rootId: string) => {
-      const els = Array.from(document.querySelectorAll(`#${CSS.escape(rootId)}`)) as HTMLElement[];
-      const info = els.map(el => {
-        const sr = (el as any).shadowRoot as ShadowRoot | undefined;
-        return {
-          tag: el.tagName,
-          id: el.id || null,
-          hasShadowRoot: !!sr,
-          hasAppContainer: !!sr?.querySelector('.app-container'),
-        };
-      });
-
-      // Useful globals set by your runtime
-      const globals = {
-        readerPanelGuiActive: (window as any).readerPanelGuiActive ?? null,
-        hasSingleton: !!(window as any).__READCURSOR_SINGLETON__,
-      };
-
-      // General shadowRoot sampling (for debugging if ROOT_ID ever changes)
+    const diag = await browser.execute(() => {
       const all = Array.from(document.querySelectorAll('*')) as HTMLElement[];
       const shadowHosts = all.filter(el => (el as any).shadowRoot) as HTMLElement[];
 
@@ -195,46 +150,28 @@ export const waitForReadCursorHost = async () => {
 
       return {
         href: location.href,
-        rootId,
-        rootMatches: els.length,
-        rootInfo: info,
-        globals,
+        lightDomHasAppContainer: !!document.querySelector('.app-container'),
         shadowHostCount: shadowHosts.length,
         sample,
       };
-    }, RC_ROOT_ID);
+    });
 
-    throw new Error(`ReadCursor host not found. Diagnostics: ${JSON.stringify(diag)}`);
+    throw new Error(`ReadCursor shadow host not found. Diagnostics: ${JSON.stringify(diag)}`);
   }
 
-  // Tag the host for convenience
-  await browser.execute(
-    (marker: string, rootId: string) => {
-      const existing = document.querySelector(`[${marker}="1"]`);
-      if (existing) return;
+  await browser.execute((marker: string) => {
+    const existing = document.querySelector(`[${marker}="1"]`);
+    if (existing) return;
 
-      const els = Array.from(document.querySelectorAll(`#${CSS.escape(rootId)}`)) as HTMLElement[];
-      for (const el of els) {
-        const sr = (el as any).shadowRoot as ShadowRoot | undefined;
-        if (sr && sr.querySelector('.app-container')) {
-          el.setAttribute(marker, '1');
-          return;
-        }
+    const all = Array.from(document.querySelectorAll('*')) as HTMLElement[];
+    for (const el of all) {
+      const sr = (el as any).shadowRoot as ShadowRoot | undefined;
+      if (sr && sr.querySelector('.app-container')) {
+        el.setAttribute(marker, '1');
+        return;
       }
-
-      // Fallback: tag any host with .app-container
-      const all = Array.from(document.querySelectorAll('*')) as HTMLElement[];
-      for (const el of all) {
-        const sr = (el as any).shadowRoot as ShadowRoot | undefined;
-        if (sr && sr.querySelector('.app-container')) {
-          el.setAttribute(marker, '1');
-          return;
-        }
-      }
-    },
-    HOST_MARKER,
-    RC_ROOT_ID,
-  );
+    }
+  }, HOST_MARKER);
 
   const host = await $(`[${HOST_MARKER}="1"]`);
   await host.waitForExist();

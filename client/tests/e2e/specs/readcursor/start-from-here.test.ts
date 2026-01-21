@@ -1,13 +1,17 @@
 import { openFixture } from '../../helpers/fixtures.js';
-import { openPopupInNewTab, clickOpenReadCursor, waitForReadCursorHost } from '../../helpers/readcursor.js';
+import { openPopupInNewTab, e2eInjectIntoFixture, waitForReadCursorHost } from '../../helpers/readcursor.js';
 
 describe('ReadCursor - start-from-here', () => {
   it('starts reading near a chosen block when readcursor:startHere fires', async () => {
     await openFixture('basic-article');
     const pageHandle = await browser.getWindowHandle();
 
-    await openPopupInNewTab();
-    await clickOpenReadCursor();
+    const fixtureUrl = await browser.getUrl();
+    const fixtureOrigin = new URL(fixtureUrl).origin;
+
+    const { popupHandle } = await openPopupInNewTab();
+    await browser.switchToWindow(popupHandle);
+    await e2eInjectIntoFixture(fixtureOrigin);
 
     await browser.switchToWindow(pageHandle);
     const host = await waitForReadCursorHost();
@@ -28,7 +32,7 @@ describe('ReadCursor - start-from-here', () => {
       return { rcid, x, y };
     });
 
-    // Fire the same event your real workflow uses
+    // Fire the same event App listens for
     await browser.execute(({ rcid, x, y }: { rcid: string; x: number; y: number }) => {
       window.dispatchEvent(
         new CustomEvent('readcursor:startHere', {
@@ -37,7 +41,7 @@ describe('ReadCursor - start-from-here', () => {
       );
     }, target);
 
-    // Assert highlight CSS vars got set on the target block (Highlighter writes to inline styles)
+    // Assert highlight CSS vars got set on the target block
     await browser.waitUntil(
       async () => {
         const width = await browser.execute((rcid: string) => {

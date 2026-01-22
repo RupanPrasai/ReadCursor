@@ -35,8 +35,7 @@ const FALLBACK_PREFS: ReadCursorPrefsV1 = {
 const storage = createStorage<ReadCursorPrefsV1>('readcursor:prefs', FALLBACK_PREFS, {
   storageEnum: StorageEnum.Sync,
   // NOTE: leave false for now; your current liveUpdate implementation is likely wrong.
-  // We'll fix liveUpdate in Step 2, then you can flip this to true.
-  liveUpdate: false,
+  liveUpdate: true,
 });
 
 export const readCursorPrefsStorage = {

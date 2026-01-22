@@ -30,8 +30,7 @@ const FALLBACK_UI_STATE: ReadCursorUiStateV1 = {
 
 const storage = createStorage<ReadCursorUiStateV1>('readcursor:ui', FALLBACK_UI_STATE, {
   storageEnum: StorageEnum.Local,
-  // Same note as prefs: keep false until Step 2.
-  liveUpdate: false,
+  liveUpdate: true,
 });
 
 export const readCursorUiStateStorage = {

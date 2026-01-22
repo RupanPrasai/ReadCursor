@@ -3,32 +3,33 @@ import type { BaseStorageType, StorageConfigType, ValueOrUpdateType } from './ty
 
 /**
  * Chrome reference error while running `processTailwindFeatures` in tailwindcss.
- *  To avoid this, we need to check if globalThis.chrome is available and add fallback logic.
+ * To avoid this, we need to check if globalThis.chrome is available and add fallback logic.
  */
-const chrome = globalThis.chrome;
+const chrome = globalThis.chrome as any;
+
+/**
+ * Best-effort stable stringification for Chrome-storage-safe values (JSON-serializable).
+ * Used to suppress "echo" updates from chrome.storage.onChanged after our own .set().
+ */
+const stableStringify = (v: unknown) => {
+  try {
+    return JSON.stringify(v);
+  } catch {
+    return String(v);
+  }
+};
 
 /**
  * Sets or updates an arbitrary cache with a new value or the result of an update function.
  */
 const updateCache = async <D>(valueOrUpdate: ValueOrUpdateType<D>, cache: D | null): Promise<D> => {
-  // Type guard to check if our value or update is a function
-  const isFunction = <D>(value: ValueOrUpdateType<D>): value is (prev: D) => D | Promise<D> =>
-    typeof value === 'function';
+  const isFunction = (value: ValueOrUpdateType<D>): value is (prev: D) => D | Promise<D> => typeof value === 'function';
 
-  // Type guard to check in case of a function if it's a Promise
-  const returnsPromise = <D>(func: (prev: D) => D | Promise<D>): func is (prev: D) => Promise<D> =>
-    // Use ReturnType to infer the return type of the function and check if it's a Promise
-    (func as (prev: D) => Promise<D>) instanceof Promise;
   if (isFunction(valueOrUpdate)) {
-    // Check if the function returns a Promise
-    if (returnsPromise(valueOrUpdate)) {
-      return valueOrUpdate(cache as D);
-    } else {
-      return valueOrUpdate(cache as D);
-    }
-  } else {
-    return valueOrUpdate;
+    return await valueOrUpdate(cache as D);
   }
+
+  return valueOrUpdate;
 };
 
 /**
@@ -41,11 +42,9 @@ let globalSessionAccessLevelFlag: StorageConfigType['sessionAccessForContentScri
  * Checks if the storage permission is granted in the manifest.json.
  */
 const checkStoragePermission = (storageEnum: StorageEnum): void => {
-  if (!chrome) {
-    return;
-  }
+  if (!chrome) return;
 
-  if (!chrome.storage[storageEnum]) {
+  if (!chrome.storage?.[storageEnum]) {
     throw new Error(`"storage" permission in manifest.ts: "storage ${storageEnum}" isn't defined`);
   }
 };
@@ -68,7 +67,10 @@ export const createStorage = <D = string>(
   const serialize = config?.serialization?.serialize ?? ((v: D) => v);
   const deserialize = config?.serialization?.deserialize ?? (v => v as D);
 
-  // Set global session storage access level for StoryType.Session, only when not already done but needed.
+  // Used to suppress storage.onChanged echo from our own set().
+  let lastWrittenStable: string | null = null;
+
+  // Set global session storage access level for StorageEnum.Session, only when not already done but needed.
   if (
     globalSessionAccessLevelFlag === false &&
     storageEnum === StorageEnum.Session &&
@@ -76,36 +78,43 @@ export const createStorage = <D = string>(
   ) {
     checkStoragePermission(storageEnum);
 
-    chrome?.storage[storageEnum]
-      .setAccessLevel({
+    chrome?.storage?.[storageEnum]
+      ?.setAccessLevel?.({
         accessLevel: SessionAccessLevelEnum.ExtensionPagesAndContentScripts,
       })
-      .catch(error => {
+      ?.catch((error: unknown) => {
         console.error(error);
         console.error('Please call .setAccessLevel() into different context, like a background script.');
       });
+
     globalSessionAccessLevelFlag = true;
   }
 
   // Register life cycle methods
   const get = async (): Promise<D> => {
     checkStoragePermission(storageEnum);
-    const value = await chrome?.storage[storageEnum].get([key]);
 
-    if (!value) {
-      return fallback;
-    }
+    const value = await chrome?.storage?.[storageEnum]?.get?.([key]);
+    if (!value) return fallback;
 
-    return deserialize(value[key]) ?? fallback;
+    return (deserialize(value[key]) ?? fallback) as D;
   };
 
   const set = async (valueOrUpdate: ValueOrUpdateType<D>) => {
     if (!initialCache) {
       cache = await get();
     }
+
     cache = await updateCache(valueOrUpdate, cache);
 
-    await chrome?.storage[storageEnum].set({ [key]: serialize(cache) });
+    const serialized = serialize(cache);
+
+    // Suppress the onChanged echo of our own write (best effort).
+    lastWrittenStable = stableStringify(serialized);
+
+    await chrome?.storage?.[storageEnum]?.set?.({ [key]: serialized });
+
+    // Local subscribers should update immediately.
     _emitChange();
   };
 
@@ -123,20 +132,29 @@ export const createStorage = <D = string>(
     listeners.forEach(listener => listener());
   };
 
-  // Listener for live updates from the browser
-  const _updateFromStorageOnChanged = async (changes: { [key: string]: chrome.storage.StorageChange }) => {
-    // Check if the key we are listening for is in the changes object
-    if (changes[key] === undefined) return;
+  // Listener for live updates from the browser (cross-context sync)
+  const _updateFromStorageOnChanged = async (changes: { [k: string]: any }) => {
+    const change = changes[key];
+    if (change === undefined) return;
 
-    const valueOrUpdate: ValueOrUpdateType<D> = deserialize(changes[key].newValue);
+    // chrome.storage.onChanged emits { oldValue, newValue }
+    const rawNew = change?.newValue;
 
-    if (cache === valueOrUpdate) return;
+    // Ignore echo events from our own set() when possible.
+    if (lastWrittenStable != null && stableStringify(rawNew) === lastWrittenStable) {
+      return;
+    }
 
-    cache = await updateCache(valueOrUpdate, cache);
+    // If key was removed, treat as fallback.
+    const nextValue: D = rawNew === undefined ? fallback : ((deserialize(rawNew) as D) ?? fallback);
 
+    if (cache === nextValue) return;
+
+    cache = await updateCache(nextValue, cache);
     _emitChange();
   };
 
+  // Initialize cache
   get().then(data => {
     cache = data;
     initialCache = true;
@@ -144,8 +162,11 @@ export const createStorage = <D = string>(
   });
 
   // Register listener for live updates for our storage area
-  if (liveUpdate) {
-    chrome?.storage[storageEnum].onChanged.addListener(_updateFromStorageOnChanged);
+  if (liveUpdate && chrome?.storage?.onChanged?.addListener) {
+    chrome.storage.onChanged.addListener((changes: any, areaName: string) => {
+      if (areaName !== storageEnum) return;
+      void _updateFromStorageOnChanged(changes);
+    });
   }
 
   return {
@@ -155,3 +176,4 @@ export const createStorage = <D = string>(
     subscribe,
   };
 };
+

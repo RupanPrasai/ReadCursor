@@ -35,7 +35,7 @@ function isE2EBuild(): boolean {
   }
 }
 
-function bumpDocCounter(datasetKey: 'rcE2eInit' | 'rcE2eDispose'): number {
+function bumpDocCounter(datasetKey: 'rcE2eInit' | 'rcE2eDispose' | 'rcE2eRebuild'): number {
   const el = document.documentElement;
   const raw = el.dataset[datasetKey];
   const next = (raw ? Number(raw) : 0) + 1;
@@ -95,6 +95,10 @@ export default function App({ destroyCallback, wordGeometry }: AppProps) {
         const t0 = performance.now();
         const nextWords = extractWordGeometryFromReadableNodes(blocks) as WordGeometry[];
         controller.reloadGeometry(nextWords);
+
+        if (isE2EBuild()) {
+          bumpDocCounter('rcE2eRebuild');
+        }
         const dt = Math.round(performance.now() - t0);
 
         console.log(

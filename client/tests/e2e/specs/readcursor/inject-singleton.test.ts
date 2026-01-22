@@ -1,5 +1,3 @@
-// client/tests/e2e/specs/readcursor/inject-singleton.test.ts
-
 import { openFixture } from '../../helpers/fixtures.js';
 import {
   openPopupInNewTab,

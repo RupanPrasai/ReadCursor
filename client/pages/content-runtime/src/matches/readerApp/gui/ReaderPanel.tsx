@@ -4,9 +4,9 @@ import { PanelShell } from './PanelShell';
 import { PlaybackControls } from './PlaybackControls';
 import { ResizeHandles } from './ResizeHandles';
 import { SpeedControls } from './SpeedControls';
-import { readCursorPrefsStorage, readCursorUiStateStorage } from '../../../../../../packages/storage/lib';
 import { useDraggableResizable } from '../hooks/useDraggableResizable';
 import { useStorage } from '@extension/shared';
+import { readCursorPrefsStorage, readCursorUiStateStorage } from '@extension/storage';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, useCallback } from 'react';
 import type { ReaderController } from '../readerEngine/controller';
 
@@ -99,7 +99,7 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
   const startDragWrapped = useCallback(
     (e: React.MouseEvent) => {
       draggingRef.current = true;
-      startDrag(e);
+      startDrag(e as unknown as React.MouseEvent<HTMLDivElement>);
     },
     [startDrag],
   );
@@ -107,7 +107,7 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
   const startResizeWrapped = useCallback(
     (e: React.MouseEvent, dir: any) => {
       resizingRef.current = true;
-      startResize(e, dir);
+      startResize(dir)(e as unknown as React.MouseEvent<HTMLDivElement>);
     },
     [startResize],
   );

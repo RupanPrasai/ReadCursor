@@ -1,8 +1,8 @@
 import { getReadableNodes } from './dom/ReadableText';
 import { extractWordGeometryFromReadableNodes } from './dom/ReadableWords';
-import { readCursorPrefsStorage } from '../../../../../packages/storage/lib';
 import inlineCss from '../../../dist/readerApp/index.css?inline';
 import { initAppWithShadow } from '@extension/shared';
+import { readCursorPrefsStorage } from '@extension/storage';
 import App from '@src/matches/readerApp/App';
 import type { Root } from 'react-dom/client';
 

@@ -54,7 +54,6 @@ function findTitleNode(title: string): HTMLElement | null {
 /**
  * - Labelling DOM Nodes
  */
-
 function labelDomNodes(): void {
   let max = 0;
 
@@ -72,7 +71,6 @@ function labelDomNodes(): void {
   let rcCounter = max + 1;
 
   // Label any unlabeled elements
-
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
   while (walker.nextNode()) {
     const el = walker.currentNode as Element;
@@ -151,14 +149,22 @@ function injectHighlightableCSSOnce() {
   const style = document.createElement('style');
   style.id = HIGHLIGHT_CSS_ID;
 
+  // IMPORTANT:
+  // - Keep the existing geometry-driven highlight variables (--hl-*, --block-*)
+  // - Make colors configurable via CSS variables so prefs can update live
   style.textContent = `
+    :root {
+      --rc-word-hl: rgba(255, 0, 0, 0.35);
+      --rc-block-hl: rgba(0, 150, 255, 0.15);
+    }
+
     .rc-highlightable {
       position: relative !important;
-      
+
       background-image:
         linear-gradient(transparent, transparent),
-        linear-gradient(rgba(255, 0, 0, 0.35), rgba(255, 0, 0, 0.35)),
-        linear-gradient(rgba(0, 150, 255, 0.15), rgba(0, 150, 255, 0.15));
+        linear-gradient(var(--rc-word-hl), var(--rc-word-hl)),
+        linear-gradient(var(--rc-block-hl), var(--rc-block-hl));
 
       background-repeat: no-repeat;
 
@@ -176,13 +182,14 @@ function injectHighlightableCSSOnce() {
         0 0,
         var(--hl-left) var(--hl-top),
         var(--block-left) var(--block-top);
-      
+
       background-size:
         100% 100%,
         var(--hl-width) var(--hl-height),
         var(--block-width) var(--block-height);
     }
   `;
+
   document.head.appendChild(style);
 }
 

@@ -1,11 +1,20 @@
 export class AutoScroll {
   private margin = 200;
   private isScrolling = false;
+  private enabled = true;
+
+  setEnabled(enabled: boolean) {
+    this.enabled = !!enabled;
+    // Do not force-cancel an in-progress scroll; just prevent new ones.
+  }
+
+  getEnabled() {
+    return this.enabled;
+  }
 
   private animateScrollTo(targetY: number, duration = 400) {
-    if (this.isScrolling) {
-      return;
-    }
+    if (!this.enabled) return;
+    if (this.isScrolling) return;
 
     this.isScrolling = true;
 
@@ -16,6 +25,12 @@ export class AutoScroll {
     const ease = (time: number) => (time < 0.5 ? 2 * time * time : -1 + (4 - 2 * time) * time);
 
     const frame = (now: number) => {
+      // If disabled mid-animation, stop ASAP.
+      if (!this.enabled) {
+        this.isScrolling = false;
+        return;
+      }
+
       const time = Math.min((now - startTime) / duration, 1);
       const progress = ease(time);
 
@@ -27,10 +42,14 @@ export class AutoScroll {
         this.isScrolling = false;
       }
     };
+
     requestAnimationFrame(frame);
   }
 
-  checkScroll(blockElement: HTMLElement) {
+  checkScroll(blockElement: HTMLElement | null) {
+    if (!this.enabled) return;
+    if (!blockElement) return;
+
     const rect = blockElement.getBoundingClientRect();
     const viewportHeight = window.innerHeight;
 
@@ -40,9 +59,8 @@ export class AutoScroll {
   }
 
   initiateScroll(blockElement: HTMLElement) {
-    if (this.isScrolling) {
-      return;
-    }
+    if (!this.enabled) return;
+    if (this.isScrolling) return;
 
     const rect = blockElement.getBoundingClientRect();
     const targetY = window.scrollY + rect.top - window.innerHeight * 0.3;

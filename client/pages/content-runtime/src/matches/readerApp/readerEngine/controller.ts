@@ -611,6 +611,11 @@ export class ReaderController {
     this.notify();
   }
 
+  setAutoScrollEnabled(enabled: boolean) {
+    this.autoScroll.setEnabled(enabled);
+    this.notify();
+  }
+
   setWPM(raw: number) {
     const wpm = clampInt(raw, MIN_WPM, MAX_WPM);
     if (wpm === this.wpm) return;

@@ -1,8 +1,10 @@
 import { extractWordGeometryFromReadableNodes } from './dom/ReadableWords';
 import { ReaderPanel } from './gui/ReaderPanel';
 import { ReaderController } from './readerEngine/controller';
+import { readCursorPrefsStorage } from '@extension/storage';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import type { WordGeometry } from './readerEngine/Highlighter';
+import type { ReadCursorPrefsV1 } from '@extension/storage';
 
 interface AppProps {
   destroyCallback: () => void;
@@ -43,8 +45,39 @@ function bumpDocCounter(datasetKey: 'rcE2eInit' | 'rcE2eDispose' | 'rcE2eRebuild
   return next;
 }
 
+function parseHexColor(hex: string): { r: number; g: number; b: number } | null {
+  if (typeof hex !== 'string') return null;
+  const s = hex.trim().toLowerCase();
+  const m = /^#([0-9a-f]{6})$/.exec(s);
+  if (!m) return null;
+  const n = Number.parseInt(m[1], 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return { r, g, b };
+}
+
+function applyHighlightColorVars(hex: string) {
+  const rgb = parseHexColor(hex);
+  if (!rgb) return;
+
+  // word highlight: stronger
+  document.documentElement.style.setProperty('--rc-word-hl', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.35)`);
+  // block highlight: subtler
+  document.documentElement.style.setProperty('--rc-block-hl', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.12)`);
+}
+
+function computeInitialWpm(prefs: ReadCursorPrefsV1 | null): number {
+  if (!prefs) return 150;
+  return prefs.rememberLastWpm ? prefs.lastWpm : prefs.defaultWpm;
+}
+
 export default function App({ destroyCallback, wordGeometry }: AppProps) {
   const [controller] = useState(() => new ReaderController());
+
+  // prefs state + ref for use inside callbacks
+  const [prefs, setPrefs] = useState<ReadCursorPrefsV1 | null>(null);
+  const prefsRef = useRef<ReadCursorPrefsV1 | null>(null);
 
   // pending start ctx (used for: init-before-load & rebuild-in-flight)
   const pendingStartRef = useRef<any>(null);
@@ -55,10 +88,102 @@ export default function App({ destroyCallback, wordGeometry }: AppProps) {
   const rebuildTimerRef = useRef<number | null>(null);
   const rebuildInFlightRef = useRef(false);
 
+  // debounce for persisting lastWpm
+  const persistWpmTimerRef = useRef<number | null>(null);
+  const lastQueuedWpmRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    prefsRef.current = prefs;
+  }, [prefs]);
+
+  // Load prefs + subscribe to updates
+  useEffect(() => {
+    let alive = true;
+
+    const refresh = async () => {
+      try {
+        const next = await readCursorPrefsStorage.get();
+        if (!alive) return;
+        setPrefs(next);
+      } catch {
+        // ignore; runtime should still function with defaults
+      }
+    };
+
+    void refresh();
+
+    const unsub = readCursorPrefsStorage.subscribe(() => {
+      void refresh();
+    });
+
+    return () => {
+      alive = false;
+      unsub();
+    };
+  }, []);
+
+  // Apply prefs when they change (safe before/after geometry load)
+  useEffect(() => {
+    if (!prefs) return;
+
+    applyHighlightColorVars(prefs.highlightColor);
+
+    // Auto-scroll (no-op if you haven't added the method on controller yet)
+    (controller as any).setAutoScrollEnabled?.(prefs.autoScrollEnabled);
+
+    if (loadedRef.current) {
+      controller.setWPM(computeInitialWpm(prefs));
+    }
+  }, [prefs, controller]);
+
+  // Persist lastWpm when controller WPM changes (only if rememberLastWpm is enabled)
+  useEffect(() => {
+    const schedulePersistLastWpm = (wpm: number) => {
+      const p = prefsRef.current;
+      if (!p?.rememberLastWpm) return;
+
+      // avoid spamming writes
+      if (p.lastWpm === wpm) return;
+      if (lastQueuedWpmRef.current === wpm) return;
+
+      lastQueuedWpmRef.current = wpm;
+
+      if (persistWpmTimerRef.current != null) {
+        window.clearTimeout(persistWpmTimerRef.current);
+      }
+
+      persistWpmTimerRef.current = window.setTimeout(async () => {
+        persistWpmTimerRef.current = null;
+        try {
+          await readCursorPrefsStorage.setPartial({ lastWpm: wpm });
+        } catch {
+          // ignore storage failures
+        }
+      }, 450);
+    };
+
+    let lastSeenWpm = controller.getStatus().wpm;
+
+    const unsub = controller.subscribe(() => {
+      const wpm = controller.getStatus().wpm;
+      if (wpm === lastSeenWpm) return;
+      lastSeenWpm = wpm;
+      schedulePersistLastWpm(wpm);
+    });
+
+    return () => {
+      unsub();
+      if (persistWpmTimerRef.current != null) {
+        window.clearTimeout(persistWpmTimerRef.current);
+        persistWpmTimerRef.current = null;
+      }
+    };
+  }, [controller]);
+
+  // E2E counters + instance marker
   useEffect(() => {
     if (!isE2EBuild()) return;
 
-    // visible from page world via DOM attributes (WDIO browser.execute)
     const initN = bumpDocCounter('rcE2eInit');
 
     const host = document.getElementById('__ROOT_READERPANEL__');
@@ -88,7 +213,7 @@ export default function App({ destroyCallback, wordGeometry }: AppProps) {
 
         if (!blocks.length) {
           console.log('[ReadCursor][viewport] rebuild skipped: no .rc-highlightable blocks found');
-          lastSigRef.current = nextSig; // prevent tight loops
+          lastSigRef.current = nextSig;
           return;
         }
 
@@ -120,12 +245,20 @@ export default function App({ destroyCallback, wordGeometry }: AppProps) {
     [controller],
   );
 
+  // Initial load
   useEffect(() => {
     if (loadedRef.current) return;
     if (!wordGeometry?.length) return;
 
     controller.load(wordGeometry);
-    controller.setWPM(150);
+
+    const p = prefsRef.current;
+    controller.setWPM(computeInitialWpm(p));
+    if (p) {
+      applyHighlightColorVars(p.highlightColor);
+      (controller as any).setAutoScrollEnabled?.(p.autoScrollEnabled);
+    }
+
     loadedRef.current = true;
 
     // establish baseline at the moment geometry is considered "valid"
@@ -137,8 +270,12 @@ export default function App({ destroyCallback, wordGeometry }: AppProps) {
     }
   }, [controller, wordGeometry]);
 
+  // Start-from-here event (prefs-gated)
   useEffect(() => {
     const onStartHere = (event: any) => {
+      const p = prefsRef.current;
+      if (p && p.startFromSelectionEnabled === false) return;
+
       const lastCtx = event?.detail?.lastCtx;
       if (!lastCtx) return;
 
@@ -147,9 +284,6 @@ export default function App({ destroyCallback, wordGeometry }: AppProps) {
         return;
       }
 
-      // If viewport changed since last known-good geometry, rebuild immediately
-      // so startFromHere maps against CURRENT layout.
-      //
       const nextSig = getViewportSignature();
       const prevSig = lastSigRef.current;
 
@@ -157,7 +291,6 @@ export default function App({ destroyCallback, wordGeometry }: AppProps) {
         clearRebuildTimer();
 
         if (rebuildInFlightRef.current) {
-          // run after rebuild completes
           pendingStartRef.current = lastCtx;
           return;
         }
@@ -172,6 +305,7 @@ export default function App({ destroyCallback, wordGeometry }: AppProps) {
     return () => window.removeEventListener('readcursor:startHere', onStartHere);
   }, [controller, rebuildNow, clearRebuildTimer]);
 
+  // Viewport signature rebuild
   useEffect(() => {
     const requestRebuildIfNeeded = (reason: string) => {
       if (!loadedRef.current) return;

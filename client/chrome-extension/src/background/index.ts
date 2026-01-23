@@ -5,34 +5,66 @@ const MENU_ID = 'readcursor_start_here';
 // -------------------------
 // Context menu (prefs-driven)
 // -------------------------
-async function syncStartFromSelectionContextMenu() {
-  // Default to enabled if prefs fail to load (safer UX)
-  let enabled = true;
 
-  try {
-    const prefs = await readCursorPrefsStorage.get();
-    enabled = !!prefs.startFromSelectionEnabled;
-  } catch {
-    enabled = true;
-  }
+function swallowLastError() {
+  // Accessing it clears the "Unchecked runtime.lastError" noise in Chrome.
+  void chrome.runtime.lastError;
+}
 
-  if (enabled) {
-    try {
-      chrome.contextMenus.create({
+function removeMenu(id: string): Promise<void> {
+  return new Promise(resolve => {
+    chrome.contextMenus.remove(id, () => {
+      swallowLastError(); // ignore "not found"
+      resolve();
+    });
+  });
+}
+
+function createMenu(): Promise<void> {
+  return new Promise(resolve => {
+    chrome.contextMenus.create(
+      {
         id: MENU_ID,
         title: 'Start reading from here',
         contexts: ['selection', 'page'],
-      });
-    } catch {
-      // Ignore duplicate ID races across SW restarts.
-    }
-  } else {
+      },
+      () => {
+        swallowLastError(); // ignore duplicate-id
+        resolve();
+      },
+    );
+  });
+}
+
+let syncInFlight: Promise<void> | null = null;
+
+async function syncStartFromSelectionContextMenu(): Promise<void> {
+  // Serialize calls to avoid races (boot + onStartup + onChanged, etc.)
+  if (syncInFlight) return syncInFlight;
+
+  syncInFlight = (async () => {
+    // Default to enabled if prefs fail to load (safer UX)
+    let enabled = true;
+
     try {
-      chrome.contextMenus.remove(MENU_ID);
+      const prefs = await readCursorPrefsStorage.get();
+      enabled = !!prefs.startFromSelectionEnabled;
     } catch {
-      // Ignore "not found"
+      enabled = true;
     }
-  }
+
+    if (enabled) {
+      // Idempotent: remove first, then create.
+      await removeMenu(MENU_ID);
+      await createMenu();
+    } else {
+      await removeMenu(MENU_ID);
+    }
+  })().finally(() => {
+    syncInFlight = null;
+  });
+
+  return syncInFlight;
 }
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -48,7 +80,7 @@ void syncStartFromSelectionContextMenu();
 
 chrome.storage.onChanged.addListener((_changes, areaName) => {
   // Your prefs storage might be Sync or Local depending on how you configured it.
-  // Just react to both; this is cheap and avoids key-coupling.
+  // React to both; cheap and avoids key-coupling.
   if (areaName !== 'sync' && areaName !== 'local') return;
   void syncStartFromSelectionContextMenu();
 });

@@ -5,9 +5,7 @@ import { PlaybackControls } from './PlaybackControls';
 import { ResizeHandles } from './ResizeHandles';
 import { SpeedControls } from './SpeedControls';
 import { useDraggableResizable } from '../hooks/useDraggableResizable';
-import { useStorage } from '@extension/shared';
-import { readCursorPrefsStorage, readCursorUiStateStorage } from '@extension/storage';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, useCallback } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReaderController } from '../readerEngine/controller';
 
 interface ReaderPanelProps {
@@ -61,29 +59,24 @@ function clampRectToViewport(rect: PanelRect, scale: number) {
   };
 }
 
-const DEFAULT_OPEN_RECT: PanelRect = { left: 96, top: 96, width: 300, height: 400 };
-
 export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
   useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const status = controller.getStatus();
-
-  const prefs = useStorage(readCursorPrefsStorage);
-  const ui = useStorage(readCursorUiStateStorage);
-
-  const rememberPanelState = !!prefs?.rememberPanelState;
-  const rememberPanelStateRef = useRef(rememberPanelState);
-  useEffect(() => {
-    rememberPanelStateRef.current = rememberPanelState;
-  }, [rememberPanelState]);
 
   const [mode, setMode] = useState<PanelMode>('open');
   const [savedRect, setSavedRect] = useState<PanelRect | null>(null);
   const [pendingStyle, setPendingStyle] = useState<PendingStyle>(null);
 
   // ---- inverse-DPR scaling to neutralize browser zoom
+
   const baseDprRef = useRef<number | null>(null);
   const [panelScale, setPanelScale] = useState(1);
+
+  // IMPORTANT: this is "what we believe is applied"
   const prevScaleRef = useRef(1);
+
+  // Track element swaps across mode toggles (open root != minimized root)
+  const lastElRef = useRef<HTMLDivElement | null>(null);
 
   const { readerPanelRef, startDrag, startResize } = useDraggableResizable({
     minWidth: 300,
@@ -91,143 +84,6 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
     minHeight: 400,
     maxHeight: 800,
   });
-
-  // Track drag/resize end so we can persist rect without spamming writes.
-  const draggingRef = useRef(false);
-  const resizingRef = useRef(false);
-
-  const startDragWrapped = useCallback(
-    (e: React.MouseEvent) => {
-      draggingRef.current = true;
-      startDrag(e as unknown as React.MouseEvent<HTMLDivElement>);
-    },
-    [startDrag],
-  );
-
-  const startResizeWrapped = useCallback(
-    (e: React.MouseEvent, dir: any) => {
-      resizingRef.current = true;
-      startResize(dir)(e as unknown as React.MouseEvent<HTMLDivElement>);
-    },
-    [startResize],
-  );
-
-  const readRect = useCallback((): PanelRect | null => {
-    const el = readerPanelRef.current;
-    if (!el) return null;
-
-    const r = el.getBoundingClientRect();
-    const s = prevScaleRef.current || 1;
-
-    return {
-      left: Math.round(r.left / s),
-      top: Math.round(r.top / s),
-      width: Math.round(r.width / s),
-      height: Math.round(r.height / s),
-    };
-  }, [readerPanelRef]);
-
-  const applyRect = useCallback(
-    (rect: PanelRect) => {
-      const el = readerPanelRef.current;
-      if (!el) return;
-
-      const s = prevScaleRef.current || 1;
-
-      // Convert unscaled to CSS left/top for current scale
-      const cssRect = {
-        left: rect.left * s,
-        top: rect.top * s,
-        width: rect.width,
-        height: rect.height,
-      };
-
-      const clamped = clampRectToViewport(cssRect, s);
-
-      el.style.left = `${clamped.left}px`;
-      el.style.top = `${clamped.top}px`;
-      el.style.width = `${clamped.width}px`;
-      el.style.height = `${clamped.height}px`;
-    },
-    [readerPanelRef],
-  );
-
-  const clearInlineRect = useCallback(() => {
-    const el = readerPanelRef.current;
-    if (!el) return;
-    el.style.left = '';
-    el.style.top = '';
-    el.style.width = '';
-    el.style.height = '';
-  }, [readerPanelRef]);
-
-  const persistUi = useCallback(async (patch: { panelMode?: PanelMode; panelRect?: PanelRect | null }) => {
-    if (!rememberPanelStateRef.current) return;
-    await readCursorUiStateStorage.setPartial(patch as any);
-  }, []);
-
-  // Hydrate panel rect/mode from storage once (only if enabled).
-  const hydratedRef = useRef(false);
-  useLayoutEffect(() => {
-    if (hydratedRef.current) return;
-    if (!rememberPanelState) {
-      hydratedRef.current = true;
-      return;
-    }
-    if (!ui) return; // wait until storage snapshot is ready
-    if (!readerPanelRef.current) return;
-
-    const storedRect = (ui.panelRect as PanelRect | null) ?? null;
-    const storedMode = (ui.panelMode as PanelMode) ?? 'open';
-
-    setSavedRect(storedRect);
-
-    if (storedMode === 'minimized') {
-      const base = storedRect ?? DEFAULT_OPEN_RECT;
-      setMode('minimized');
-      setPendingStyle({ kind: 'apply', rect: { left: base.left, top: base.top, width: PILL_W, height: PILL_H } });
-    } else if (storedRect) {
-      setMode('open');
-      setPendingStyle({ kind: 'apply', rect: storedRect });
-    }
-
-    hydratedRef.current = true;
-  }, [rememberPanelState, ui, readerPanelRef]);
-
-  // Persist on drag/resize end (mouseup/touchend).
-  useEffect(() => {
-    const onUp = () => {
-      if (!rememberPanelStateRef.current) return;
-      if (!draggingRef.current && !resizingRef.current) return;
-
-      draggingRef.current = false;
-      resizingRef.current = false;
-
-      const rectNow = readRect();
-      if (!rectNow) return;
-
-      if (mode === 'open') {
-        setSavedRect(rectNow);
-        void persistUi({ panelMode: 'open', panelRect: rectNow });
-        return;
-      }
-
-      // minimized: keep the open size, but update position from pill
-      const base = savedRect ?? (ui?.panelRect as PanelRect | null) ?? DEFAULT_OPEN_RECT;
-      const next: PanelRect = { ...base, left: rectNow.left, top: rectNow.top };
-
-      setSavedRect(next);
-      void persistUi({ panelMode: 'minimized', panelRect: next });
-    };
-
-    window.addEventListener('mouseup', onUp, true);
-    window.addEventListener('touchend', onUp, true);
-
-    return () => {
-      window.removeEventListener('mouseup', onUp, true);
-      window.removeEventListener('touchend', onUp, true);
-    };
-  }, [mode, savedRect, ui?.panelRect, readRect, persistUi]);
 
   useLayoutEffect(() => {
     if (baseDprRef.current == null) baseDprRef.current = window.devicePixelRatio || 1;
@@ -256,18 +112,36 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
   }, []);
 
   // Apply scale (open & minimized pill)
+  // FIX: also run when mode changes so the *new* root element gets the transform,
+  // otherwise readRect/applyRect will divide/multiply by a scale that isn't applied.
   useLayoutEffect(() => {
     const el = readerPanelRef.current;
     if (!el) return;
 
     const next = panelScale;
     const prev = prevScaleRef.current || 1;
+
+    const elChanged = lastElRef.current !== el;
+
+    // If the DOM element changed (open <-> minimized), it likely has no transform yet.
+    // Apply transform without doing the "preserve position across scale change" math.
+    if (elChanged) {
+      el.style.transformOrigin = 'top left';
+      el.style.transform = next === 1 ? '' : `scale(${next})`;
+
+      prevScaleRef.current = next;
+      lastElRef.current = el;
+      return;
+    }
+
     if (prev === next) return;
 
+    // Current visual rect under PREV scale
     const r = el.getBoundingClientRect();
     const unscaledW = Math.round(r.width / prev);
     const unscaledH = Math.round(r.height / prev);
 
+    // Keep physical position stable across scale changes
     const leftUnscaled = r.left / prev;
     const topUnscaled = r.top / prev;
 
@@ -285,74 +159,43 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
     el.style.height = `${clamped.height}px`;
 
     prevScaleRef.current = next;
-  }, [panelScale, readerPanelRef]);
+  }, [panelScale, mode]);
 
-  useLayoutEffect(() => {
-    if (!pendingStyle) return;
+  const readRect = (): PanelRect | null => {
+    const el = readerPanelRef.current;
+    if (!el) return null;
 
-    if (pendingStyle.kind === 'apply') applyRect(pendingStyle.rect);
-    else clearInlineRect();
+    const r = el.getBoundingClientRect();
+    const s = prevScaleRef.current || 1;
 
-    setPendingStyle(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingStyle]);
-
-  const minimize = () => {
-    const current = readRect();
-    const base = current ?? savedRect ?? DEFAULT_OPEN_RECT;
-
-    setSavedRect(base);
-
-    setMode('minimized');
-    setPendingStyle({ kind: 'apply', rect: { left: base.left, top: base.top, width: PILL_W, height: PILL_H } });
-
-    void persistUi({ panelMode: 'minimized', panelRect: base });
+    return {
+      left: Math.round(r.left / s),
+      top: Math.round(r.top / s),
+      width: Math.round(r.width / s),
+      height: Math.round(r.height / s),
+    };
   };
 
-  const restore = () => {
-    const pill = readRect(); // pill position
-    const base = savedRect ?? (ui?.panelRect as PanelRect | null) ?? DEFAULT_OPEN_RECT;
+  const applyRect = (rect: PanelRect) => {
+    const el = readerPanelRef.current;
+    if (!el) return;
 
-    const next: PanelRect = pill ? { ...base, left: pill.left, top: pill.top } : base;
+    const s = prevScaleRef.current || 1;
 
-    setMode('open');
-    setSavedRect(next);
-    setPendingStyle({ kind: 'apply', rect: next });
+    // Convert unscaled to CSS left/top for current scale
+    const cssRect = {
+      left: rect.left * s,
+      top: rect.top * s,
+      width: rect.width,
+      height: rect.height,
+    };
 
-    void persistUi({ panelMode: 'open', panelRect: next });
-  };
+    const clamped = clampRectToViewport(cssRect, s);
 
-  // --- WPM UI (single source of truth = controller status)
-  const wpm = status.wpm;
-  const editingRef = useRef(false);
-  const [wpmText, setWpmText] = useState<string>(String(wpm));
-
-  useEffect(() => {
-    if (!editingRef.current) setWpmText(String(wpm));
-  }, [wpm]);
-
-  const onWpmChange = (next: number) => {
-    editingRef.current = false;
-    const clamped = clampInt(next, MIN_WPM, MAX_WPM);
-    controller.setWPM(clamped);
-    setWpmText(String(clamped));
-  };
-
-  const onWpmTextChange = (next: string) => {
-    editingRef.current = true;
-    setWpmText(next);
-  };
-
-  const commitWpmText = () => {
-    editingRef.current = false;
-    const parsed = Number(wpmText);
-    if (!Number.isFinite(parsed)) {
-      setWpmText(String(wpm));
-      return;
-    }
-    const clamped = clampInt(parsed, MIN_WPM, MAX_WPM);
-    controller.setWPM(clamped);
-    setWpmText(String(clamped));
+    el.style.left = `${clamped.left}px`;
+    el.style.top = `${clamped.top}px`;
+    el.style.width = `${clamped.width}px`;
+    el.style.height = `${clamped.height}px`;
   };
 
   const state = String(status.state ?? 'UNKNOWN');
@@ -379,6 +222,65 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
     </span>
   );
 
+  const clearInlineRect = () => {
+    const el = readerPanelRef.current;
+    if (!el) return;
+    el.style.left = '';
+    el.style.top = '';
+    el.style.width = '';
+    el.style.height = '';
+  };
+
+  useLayoutEffect(() => {
+    if (!pendingStyle) return;
+
+    if (pendingStyle.kind === 'apply') applyRect(pendingStyle.rect);
+    else clearInlineRect();
+
+    setPendingStyle(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingStyle]);
+
+  const minimize = () => {
+    const current = readRect();
+    if (current) setSavedRect(current);
+
+    const base = current ?? { left: 96, top: 96, width: 300, height: 400 };
+    setMode('minimized');
+    setPendingStyle({ kind: 'apply', rect: { left: base.left, top: base.top, width: PILL_W, height: PILL_H } });
+  };
+
+  const restore = () => {
+    const pill = readRect(); // pill position
+    const base = savedRect ?? { left: 96, top: 96, width: 300, height: 400 };
+
+    const next: PanelRect = pill ? { ...base, left: pill.left, top: pill.top } : base;
+
+    setMode('open');
+    setSavedRect(next);
+    setPendingStyle({ kind: 'apply', rect: next });
+  };
+
+  const [wpm, setWpm] = useState<number>(150);
+  const [wpmText, setWpmText] = useState<string>('150');
+
+  useEffect(() => {
+    setWpmText(String(wpm));
+  }, [wpm]);
+
+  useEffect(() => {
+    controller.setWPM(wpm);
+  }, [controller, wpm]);
+
+  const commitWpmText = () => {
+    const parsed = Number(wpmText);
+    if (!Number.isFinite(parsed)) {
+      setWpmText(String(wpm));
+      return;
+    }
+    setWpm(clampInt(parsed, MIN_WPM, MAX_WPM));
+  };
+
   function GripIcon({ className }: { className?: string }) {
     return (
       <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
@@ -392,7 +294,9 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
     );
   }
 
+  //
   // Minimized pill render
+  //
   if (mode === 'minimized') {
     return (
       <div
@@ -401,7 +305,7 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
         aria-label="Reader panel minimized">
         {/* Drag handle ONLY */}
         <div
-          onMouseDown={startDragWrapped}
+          onMouseDown={startDrag}
           onDoubleClick={restore}
           title="Drag (double-click to restore)"
           className="flex min-w-0 flex-1 cursor-grab items-center gap-2 active:cursor-grabbing"
@@ -428,14 +332,16 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
     );
   }
 
+  //
   // Open render
+  //
   return (
     <PanelShell
       panelRef={readerPanelRef}
       dragBar={
-        <DragBar onMouseDownDrag={startDragWrapped} onClose={onDestroy} onMinimize={minimize} statusNode={statusChip} />
+        <DragBar onMouseDownDrag={startDrag} onClose={onDestroy} onMinimize={minimize} statusNode={statusChip} />
       }
-      resizeHandles={RESIZE_ENABLED ? <ResizeHandles startResize={startResizeWrapped as any} /> : null}>
+      resizeHandles={RESIZE_ENABLED ? <ResizeHandles startResize={startResize} /> : null}>
       <div className="p-4">
         <h2 className="sr-only">Reader</h2>
 
@@ -462,8 +368,8 @@ export function ReaderPanel({ onDestroy, controller }: ReaderPanelProps) {
         maxWpm={MAX_WPM}
         stepWpm={STEP_WPM}
         presets={WPM_PRESETS}
-        onWpmChange={onWpmChange}
-        onWpmTextChange={onWpmTextChange}
+        onWpmChange={setWpm}
+        onWpmTextChange={setWpmText}
         onCommitText={commitWpmText}
       />
     </PanelShell>

@@ -18,7 +18,7 @@ describe('Webextension Popup', () => {
     const { popupHandle } = await openPopupInNewTab();
     await browser.switchToWindow(popupHandle);
 
-    const btn = await $('button.primaryBtn');
+    const btn = await $('button=Open Read Cursor');
     await expect(btn).toBeExisting();
     await expect(btn).toHaveText('Open Read Cursor');
 
@@ -40,4 +40,3 @@ describe('Webextension Popup', () => {
     );
   });
 });
-

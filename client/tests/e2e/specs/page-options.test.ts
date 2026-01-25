@@ -8,6 +8,7 @@ describe('Webextension Options Page', () => {
     await browser.url(optionsUrl);
 
     await expect(browser).toHaveTitle('Options');
+    await expect($('.rcopt-shell')).toBeExisting(); // or whatever your real root class is
     await canSwitchTheme();
   });
 });

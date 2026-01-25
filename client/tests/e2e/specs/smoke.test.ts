@@ -1,7 +1,8 @@
-describe('The example page can be loaded', () => {
-  it('should be able to go to example page', async () => {
-    await browser.url('https://www.example.com');
+import { openFixture } from '../helpers/fixtures.js';
 
-    await expect(browser).toHaveTitle('Example Domain');
+describe('E2E smoke', () => {
+  it('loads the local fixture server', async () => {
+    await openFixture('basic-article');
+    await expect(browser).toHaveTitle('ReadCursor E2E Fixture');
   });
 });

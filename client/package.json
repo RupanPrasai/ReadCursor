@@ -1,6 +1,6 @@
 {
   "name": "readcursor",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A Chrome extension that overlays a reading cursor on any webpage, highlighting text and auto-advancing at a configurable WPM via a draggable control panel.",
   "author": "Rupan Prasai",
   "repository": {

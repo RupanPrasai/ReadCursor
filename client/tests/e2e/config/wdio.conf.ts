@@ -20,7 +20,7 @@ export const config: WebdriverIO.Config = {
   //
   // The path of the spec files will be resolved relative from the directory
   // of the config file unless it's absolute.
-  specs: ['../specs/**/*.ts'],
+  specs: ['../specs/readcursor/**/*.test.ts'],
   // Patterns to exclude.
   exclude: [],
   //

@@ -3,6 +3,8 @@
 
 # testing
 **/coverage
+.tmp/
+**/.tmp/
 
 # build
 **/dist

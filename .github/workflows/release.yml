@@ -1,0 +1,68 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build_release:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node (from .nvmrc)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: client/.nvmrc
+          cache: pnpm
+          cache-dependency-path: client/pnpm-lock.yaml
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Verify manifest.version matches tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update && sudo apt-get install -y jq
+          TAG="${GITHUB_REF_NAME#v}"
+          MANIFEST="dist/manifest.json"
+          if [[ ! -f "${MANIFEST}" ]]; then
+            echo "ERROR: ${MANIFEST} not found after build"
+            ls -la dist || true
+            exit 1
+          fi
+          VER="$(jq -r '.version' "${MANIFEST}")"
+          echo "tag=${TAG} manifest=${VER}"
+          if [[ "${VER}" != "${TAG}" ]]; then
+            echo "ERROR: manifest.version (${VER}) != tag (${TAG})"
+            exit 1
+          fi
+
+      - name: Zip (no rebuild)
+        run: pnpm -F zipper zip
+
+      - name: Create GitHub Release + attach zips
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            client/dist-zip/*.zip
+            client/**/dist-zip/*.zip

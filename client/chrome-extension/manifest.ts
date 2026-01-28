@@ -21,8 +21,8 @@ const manifest = {
   // (no reliance on activeTab being granted).
   ...(IS_E2E
     ? {
-      host_permissions: ['http://127.0.0.1/*', 'http://localhost/*'],
-    }
+        host_permissions: ['http://127.0.0.1/*', 'http://localhost/*'],
+      }
     : {}),
 
   options_page: 'options/index.html',

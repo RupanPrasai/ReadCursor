@@ -42,6 +42,7 @@
     "e2e:firefox": "pnpm zip:firefox && turbo e2e",
     "lint": "turbo lint --continue",
     "lint:fix": "turbo lint:fix --continue",
+    "lint:fix:serial": "cross-env NODE_OPTIONS=--max-old-space-size=4096 TURBO_UI=stream turbo lint:fix --continue --concurrency=1 --no-daemon",
     "format": "turbo format --continue -- --cache --cache-location node_modules/.cache/.prettiercache",
     "prepare": "husky",
     "update-version": "bash bash-scripts/update_version.sh",

@@ -4,5 +4,9 @@
     "baseUrl": ".",
     "outDir": "dist"
   },
-  "include": ["index.mts", "lib"]
+  "include": [
+    "index.mts",
+    "index.d.ts",
+    "lib"
+  ]
 }

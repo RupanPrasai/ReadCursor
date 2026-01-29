@@ -6,10 +6,18 @@
   "private": true,
   "sideEffects": false,
   "files": [
-    "dist/**"
+    "dist/**",
+    "index.d.ts"
   ],
   "main": "dist/index.mjs",
-  "types": "index.mts",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.mjs"
+    }
+  },
   "scripts": {
     "clean:bundle": "rimraf dist",
     "clean:node_modules": "pnpx rimraf node_modules",

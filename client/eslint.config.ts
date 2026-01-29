@@ -10,6 +10,7 @@ import { config, configs as tsConfigs, parser as tsParser } from 'typescript-esl
 import type { FixupConfigArray } from '@eslint/compat';
 
 export default config(
+  { ignores: ['packages/i18n/index.d.ts', 'packages/i18n/lib/i18n.d.ts'] },
   // Shared configs
   js.configs.recommended,
   ...tsConfigs.recommended,

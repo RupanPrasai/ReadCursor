@@ -21,7 +21,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # MUST come before setup-node if you use setup-node's pnpm cache
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:

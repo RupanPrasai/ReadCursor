@@ -70,7 +70,7 @@ It works directly on live page content and provides a lightweight, draggable con
 - Chrome Extensions (Manifest V3)
 
 ## Status
-- **Version**: 1.0.0
+- **Version**: 1.1.0
 - Actively developed
 - Initial public release
 

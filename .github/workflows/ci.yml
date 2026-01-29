@@ -1,16 +1,13 @@
 name: CI
 
 on:
-  pull_request:
   push:
     branches: [main]
+  pull_request:
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
-
-permissions:
-  contents: read
 
 jobs:
   ci:
@@ -18,16 +15,18 @@ jobs:
 
     defaults:
       run:
-        shell: bash
         working-directory: client
-
-    env:
-      # Helps avoid ESLint OOM / “Killed (137)” issues
-      NODE_OPTIONS: --max-old-space-size=4096
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # MUST come before setup-node if you use setup-node's pnpm cache
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.0
+          run_install: false
 
       - name: Setup Node (from .nvmrc)
         uses: actions/setup-node@v4
@@ -36,17 +35,14 @@ jobs:
           cache: pnpm
           cache-dependency-path: client/pnpm-lock.yaml
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.11.0
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # ✅ Replace your old `pnpm lint` step with this
-      - name: Lint (serial, non-freezing)
-        run: pnpm lint:fix:serial
+      - name: Lint (serial)
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+          TURBO_UI: stream
+        run: pnpm turbo lint --continue --concurrency=1 --no-daemon
 
       - name: Type-check
         run: pnpm type-check
@@ -54,12 +50,13 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Zip (artifact)
+      - name: Zip extension
         run: pnpm zip
 
-      - name: Upload dist zip
+      - name: Upload dist-zip artifact
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: readcursor-dist-zip
-          path: client/dist-zip/**/*.zip
-          if-no-files-found: ignore
+          name: dist-zip
+          path: client/dist-zip/*.zip
+          if-no-files-found: warn

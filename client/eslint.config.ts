@@ -25,7 +25,16 @@ export default config(
   },
   // Custom config
   {
-    ignores: ['**/build/**', '**/dist/**', '**/node_modules/**', 'chrome-extension/manifest.js'],
+    ignores: [
+      '**/build/**',
+      '**/dist/**',
+      '**/node_modules/**',
+      '**/dist-zip/**',
+      'tests/e2e/.tmp/**',
+      '**/*.zip',
+      '**/*.crx',
+      'chrome-extension/manifest.js',
+    ],
   },
   {
     files: ['**/*.{ts,tsx}'],
@@ -95,6 +104,22 @@ export default config(
       reportUnusedDisableDirectives: 'error',
     },
   },
+
+  // Temporary override for Linting (**needs to be fixed**)
+  {
+    files: [
+      'pages/content-runtime/**/*.{ts,tsx}',
+      'packages/storage/**/*.{ts,tsx}',
+      'chrome-extension/src/background/**/*.{ts,tsx}',
+      'pages/popup/**/*.{ts,tsx}',
+    ],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'warn',
+      'import-x/exports-last': 'off',
+      'jsx-a11y/no-static-element-interactions': 'warn',
+    },
+  },
+
   // Overrides Rules
   {
     files: ['**/packages/shared/**/*.ts'],

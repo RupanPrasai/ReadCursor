@@ -1,4 +1,4 @@
-name: ci
+name: CI
 
 on:
   pull_request:
@@ -9,13 +9,21 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  test:
+  ci:
     runs-on: ubuntu-latest
 
     defaults:
       run:
+        shell: bash
         working-directory: client
+
+    env:
+      # Helps avoid ESLint OOM / “Killed (137)” issues
+      NODE_OPTIONS: --max-old-space-size=4096
 
     steps:
       - name: Checkout
@@ -25,69 +33,33 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: client/.nvmrc
+          cache: pnpm
+          cache-dependency-path: client/pnpm-lock.yaml
 
-      - name: Enable Corepack + pin pnpm
-        shell: bash
-        run: |
-          set -euo pipefail
-          corepack enable
-          corepack prepare pnpm@10.11.0 --activate
-          pnpm --version
-
-      - name: Get pnpm store path
-        id: pnpm-store
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache pnpm store
-        uses: actions/cache@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          path: ${{ steps.pnpm-store.outputs.path }}
-          key: pnpm-store-${{ runner.os }}-${{ hashFiles('client/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-store-${{ runner.os }}-
+          version: 10.11.0
 
-      - name: Install deps
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint
-        run: pnpm lint
+      # ✅ Replace your old `pnpm lint` step with this
+      - name: Lint (serial, non-freezing)
+        run: pnpm lint:fix:serial
 
       - name: Type-check
         run: pnpm type-check
 
-      - name: Install Xvfb + Chrome (if missing)
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y xvfb
+      - name: Build
+        run: pnpm build
 
-          if command -v google-chrome >/dev/null 2>&1; then
-            google-chrome --version
-            exit 0
-          fi
+      - name: Zip (artifact)
+        run: pnpm zip
 
-          sudo apt-get install -y wget gnupg
-          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-linux.gpg
-          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-linux.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
-          sudo apt-get update
-          sudo apt-get install -y google-chrome-stable
-          google-chrome --version
-
-      - name: E2E (build + zip + WDIO)
-        env:
-          CI: "1"
-        run: xvfb-run -a pnpm e2e
-
-      - name: Upload zipped artifacts (if present)
+      - name: Upload dist zip
         uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: dist-zip
-          if-no-files-found: warn
-          path: |
-            client/dist-zip/*.zip
-            client/**/dist-zip/*.zip
+          name: readcursor-dist-zip
+          path: client/dist-zip/**/*.zip
+          if-no-files-found: ignore

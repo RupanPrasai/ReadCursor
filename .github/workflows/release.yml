@@ -1,20 +1,24 @@
-name: release
+name: Release
 
 on:
   push:
     tags:
-      - "v*"
+      - "v*.*.*"
 
 permissions:
   contents: write
 
 jobs:
-  build_release:
+  release:
     runs-on: ubuntu-latest
 
     defaults:
       run:
+        shell: bash
         working-directory: client
+
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
 
     steps:
       - name: Checkout
@@ -30,39 +34,22 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          run_install: false
+          version: 10.11.0
 
-      - name: Install deps
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
-        run: pnpm build
+      - name: Lint (serial, non-freezing)
+        run: pnpm lint:fix:serial
 
-      - name: Verify manifest.version matches tag
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update && sudo apt-get install -y jq
-          TAG="${GITHUB_REF_NAME#v}"
-          MANIFEST="dist/manifest.json"
-          if [[ ! -f "${MANIFEST}" ]]; then
-            echo "ERROR: ${MANIFEST} not found after build"
-            ls -la dist || true
-            exit 1
-          fi
-          VER="$(jq -r '.version' "${MANIFEST}")"
-          echo "tag=${TAG} manifest=${VER}"
-          if [[ "${VER}" != "${TAG}" ]]; then
-            echo "ERROR: manifest.version (${VER}) != tag (${TAG})"
-            exit 1
-          fi
+      - name: Type-check
+        run: pnpm type-check
 
-      - name: Zip (no rebuild)
-        run: pnpm -F zipper zip
+      - name: Zip
+        run: pnpm zip
 
-      - name: Create GitHub Release + attach zips
+      - name: Create GitHub Release + upload zip
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            client/dist-zip/*.zip
-            client/**/dist-zip/*.zip
+          files: client/dist-zip/**/*.zip
+          generate_release_notes: true

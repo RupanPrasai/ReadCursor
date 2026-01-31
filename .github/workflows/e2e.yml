@@ -1,16 +1,22 @@
-name: CI
+name: E2E
 
 on:
   push:
     branches: [main]
-  pull_request:
+  schedule:
+    # 09:00 UTC ~= 03:00 America/Chicago (CST)
+    - cron: "0 9 * * *"
+  workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: e2e-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  ci:
+  e2e:
     runs-on: ubuntu-latest
 
     defaults:
@@ -39,34 +45,29 @@ jobs:
         uses: actions/cache@v4
         with:
           path: client/.turbo
-          key: ${{ runner.os }}-turbo-${{ hashFiles('client/pnpm-lock.yaml', 'client/turbo.json', 'client/**/package.json') }}
+          key: ${{ runner.os }}-turbo-e2e-${{ hashFiles('client/pnpm-lock.yaml', 'client/turbo.json', 'client/**/package.json') }}
           restore-keys: |
+            ${{ runner.os }}-turbo-e2e-
             ${{ runner.os }}-turbo-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint (serial)
+      # Your script already does:
+      # cross-env CLI_CEB_E2E=true pnpm zip && turbo e2e
+      - name: Run E2E
         env:
+          CI: true
           NODE_OPTIONS: --max-old-space-size=4096
           TURBO_UI: stream
-        run: pnpm turbo lint --continue --concurrency=1 --no-daemon
+        run: pnpm e2e
 
-      - name: Type-check
-        env:
-          NODE_OPTIONS: --max-old-space-size=4096
-          TURBO_UI: stream
-        run: pnpm turbo type-check --no-daemon
-
-      - name: Zip extension
-        env:
-          NODE_OPTIONS: --max-old-space-size=4096
-        run: pnpm zip
-
-      - name: Upload dist-zip artifact
+      - name: Upload E2E artifacts (always)
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: dist-zip
-          path: client/dist-zip/*.zip
+          name: e2e-artifacts
+          path: |
+            client/tests/e2e/.tmp/**
+            client/dist-zip/*.zip
           if-no-files-found: warn

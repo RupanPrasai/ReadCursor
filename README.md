@@ -66,6 +66,7 @@ It works directly on live page content and provides a lightweight, draggable con
 - TypeScript
 - Vite
 - Tailwind CSS
+- Mocha
 - Turborepo
 - Chrome Extensions (Manifest V3)
 

@@ -50,13 +50,25 @@ const extPath = join(distZipDir, latestExtension);
 // Only needed for Firefox
 const bundledExtension = IS_FIREFOX ? (await readFile(extPath)).toString('base64') : '';
 
-const chromeUserDataDir = join(
-  import.meta.dirname,
-  `../.tmp/chrome-profile-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-);
+// Shared tmp root
+const tmpRoot = join(import.meta.dirname, '../.tmp');
+await mkdir(tmpRoot, { recursive: true });
+
+// Unique suffix per process/worker to prevent CI collisions
+const runSuffix = `${process.env.WDIO_WORKER_ID ?? process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+// In CI we want one worker to avoid any extension/profile churn.
+const SERIALIZE = IS_CI || process.env.RC_E2E_SERIAL === '1';
+
+const chromeUserDataDir = join(tmpRoot, `chrome-profile-${runSuffix}`);
 
 // Unpack for Chrome so capabilities don't include a giant base64 string
-const unpackDir = join(import.meta.dirname, '../.tmp/unpacked-extension');
+// IMPORTANT: unique per run/worker (prevents parallel workers from deleting each other’s dir)
+const unpackDir = join(tmpRoot, `unpacked-extension-${runSuffix}`);
+
+// Make these available to extension-path.ts even if WebDriver hides args in some environments
+process.env.RC_USER_DATA_DIR = chromeUserDataDir;
+process.env.RC_EXTENSION_DIR = unpackDir;
 
 const patchManifestForE2E = async (dir: string) => {
   const manifestPath = join(dir, 'manifest.json');
@@ -91,13 +103,15 @@ const chromeCapabilities = {
     args: [
       '--no-sandbox',
       '--disable-dev-shm-usage',
-
       '--disable-popup-blocking',
+      '--no-first-run',
+      '--no-default-browser-check',
 
       // critical: avoids profile lock / corrupted temp profile crashes
       `--user-data-dir=${chromeUserDataDir}`,
 
-      // load unpacked extension
+      // load ONLY our unpacked extension
+      `--disable-extensions-except=${unpackDir}`,
       `--load-extension=${unpackDir}`,
 
       // '--enable-logging=stderr',
@@ -119,10 +133,18 @@ const firefoxCapabilities = {
 
 export const config: WebdriverIO.Config = {
   ...baseConfig,
-  capabilities: IS_FIREFOX ? [firefoxCapabilities] : [chromeCapabilities],
+
+  // Force a single worker in CI by grouping all specs into one spec group.
+  // This prevents multi-process races around extension/profile setup.
+  specs: SERIALIZE ? [['../specs/readcursor/**/*.test.ts']] : baseConfig.specs,
+
+  capabilities: IS_FIREFOX
+    ? ([{ ...firefoxCapabilities, maxInstances: 1 }] as any)
+    : ([{ ...chromeCapabilities, maxInstances: 1 }] as any),
+
+  maxInstances: SERIALIZE ? 1 : baseConfig.maxInstances,
 
   // keep output readable while stabilizing
-  maxInstances: 1,
   logLevel: 'error',
 
   // make spec output not drown in noise
@@ -141,3 +163,4 @@ export const config: WebdriverIO.Config = {
     if (!IS_CI) await browser.pause(200);
   },
 };
+

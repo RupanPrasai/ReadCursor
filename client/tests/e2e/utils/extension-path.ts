@@ -3,59 +3,135 @@
  *  - Chrome:  chrome-extension://<id>
  *  - Firefox: moz-extension://<uuid>
  *
- * CI fix:
- *   Prefer CDP Target.getTargets (works in headless CI) and fall back to chrome://extensions scraping.
+ * CI-safe strategy:
+ *   1) RC_EXTENSION_ID / EXTENSION_ID env override
+ *   2) Parse Chrome profile Preferences (from --user-data-dir) and match --load-extension path
+ *   3) Fallback to chrome://extensions scraping (best-effort; often fails in CI/headless)
  */
 
-import { URL } from 'node:url';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 let cachedChromeExtensionPath: string | null = null;
 
-type TargetInfo = { type: string; url: string; title?: string };
-type GetTargetsResult = { targetInfos?: TargetInfo[] };
+const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
 
-function hostFromUrl(raw: string): string | null {
+function normalizeDir(p: string): string {
+  return path.resolve(p).replace(/[/\\]+$/, '');
+}
+
+function getChromeArgs(browser: WebdriverIO.Browser): string[] {
+  const caps: any = (browser as any).capabilities ?? {};
+  const opts: any = caps['goog:chromeOptions'] ?? caps['ms:edgeOptions'] ?? {};
+  const args = opts.args;
+  if (!Array.isArray(args)) return [];
+  return args.map(String);
+}
+
+function getArgValue(args: string[], name: string): string | null {
+  // supports "--flag=value" and "--flag value"
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === name) return args[i + 1] ?? null;
+    if (a.startsWith(name + '=')) return a.slice(name.length + 1);
+  }
+  return null;
+}
+
+async function fileExists(p: string): Promise<boolean> {
   try {
-    return new URL(raw).host || null;
+    await fs.stat(p);
+    return true;
   } catch {
-    return null;
+    return false;
   }
 }
 
-async function tryResolveChromeExtensionIdViaCdp(browser: WebdriverIO.Browser): Promise<string | null> {
-  // Allow explicit override (useful if multiple extensions are loaded).
-  const forced = (process.env.RC_EXTENSION_ID ?? process.env.EXTENSION_ID ?? '').trim();
-  if (forced) return forced;
+async function findPreferencesFile(userDataDir: string): Promise<string | null> {
+  // Chrome usually writes to Default/Preferences for a fresh profile.
+  const candidates = [
+    path.join(userDataDir, 'Default', 'Preferences'),
+    path.join(userDataDir, 'Profile 1', 'Preferences'),
+    path.join(userDataDir, 'Preferences'),
+  ];
 
-  // browser.cdp may not be available depending on WDIO services/driver; treat as optional.
-  const cdp = (browser as any)?.cdp;
-  if (typeof cdp !== 'function') return null;
+  for (const c of candidates) {
+    if (await fileExists(c)) return c;
+  }
 
+  // Chrome writes Preferences shortly after startup; poll briefly.
+  for (let i = 0; i < 50; i++) {
+    for (const c of candidates) {
+      if (await fileExists(c)) return c;
+    }
+    await sleep(100);
+  }
+
+  return null;
+}
+
+function parseLoadExtensionPaths(args: string[]): string[] {
+  const raw = getArgValue(args, '--load-extension');
+  if (!raw) return [];
+  return raw
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(normalizeDir);
+}
+
+async function tryResolveChromeExtensionIdViaPreferences(browser: WebdriverIO.Browser): Promise<string | null> {
+  const args = getChromeArgs(browser);
+
+  const userDataDirRaw = getArgValue(args, '--user-data-dir');
+  if (!userDataDirRaw) return null;
+
+  const userDataDir = normalizeDir(userDataDirRaw);
+  const prefsPath = await findPreferencesFile(userDataDir);
+  if (!prefsPath) return null;
+
+  const loadExtRoots = parseLoadExtensionPaths(args);
+
+  let prefs: any;
   try {
-    const res = (await (browser as any).cdp('Target', 'getTargets', {})) as GetTargetsResult;
-    const infos = res.targetInfos ?? [];
-
-    const extTargets = infos
-      .filter(t => typeof t.url === 'string' && t.url.startsWith('chrome-extension://'))
-      .map(t => ({ ...t, id: hostFromUrl(t.url) }))
-      .filter(t => !!t.id) as Array<TargetInfo & { id: string }>;
-
-    // Prefer MV3 service worker pointing to background.js
-    const preferred =
-      extTargets.find(t => t.type === 'service_worker' && /\/background\.js(\?|$)/.test(t.url)) ??
-      extTargets.find(t => t.type === 'service_worker') ??
-      extTargets[0];
-
-    return preferred?.id ?? null;
+    prefs = JSON.parse(await fs.readFile(prefsPath, 'utf8'));
   } catch {
     return null;
   }
+
+  const settings = prefs?.extensions?.settings;
+  if (!settings || typeof settings !== 'object') return null;
+
+  // Best: match entry.path to one of the --load-extension dirs.
+  if (loadExtRoots.length) {
+    for (const [id, entry] of Object.entries<any>(settings)) {
+      const entryPath = typeof entry?.path === 'string' ? normalizeDir(entry.path) : null;
+      if (!entryPath) continue;
+
+      if (loadExtRoots.includes(entryPath)) return id;
+
+      // Sometimes Chrome stores a subdir; allow prefix match.
+      for (const root of loadExtRoots) {
+        if (entryPath.startsWith(root + path.sep)) return id;
+      }
+    }
+  }
+
+  // Next best: if only one MV3 extension exists, use it.
+  const mv3: string[] = [];
+  for (const [id, entry] of Object.entries<any>(settings)) {
+    const mv = entry?.manifest?.manifest_version;
+    const sw = entry?.manifest?.background?.service_worker;
+    if (mv === 3 && typeof sw === 'string') mv3.push(id);
+  }
+  if (mv3.length === 1) return mv3[0];
+
+  return null;
 }
 
 async function resolveChromeExtensionIdViaExtensionsPage(browser: WebdriverIO.Browser): Promise<string> {
   const originalHandle = await browser.getWindowHandle();
 
-  // Open extensions manager in a TAB (not a new window), so it’s less disruptive.
   await browser.newWindow('chrome://extensions/', { type: 'tab' });
 
   const mgrHandle = await browser.getWindowHandle();
@@ -66,45 +142,37 @@ async function resolveChromeExtensionIdViaExtensionsPage(browser: WebdriverIO.Br
     timeoutMsg: 'chrome://extensions did not load extensions-manager',
   });
 
-  const extensionId = await (async () => {
-    const extensionsManager = await $('extensions-manager').getElement();
+  const extensionsManager = await $('extensions-manager').getElement();
+  const itemList = await extensionsManager.shadow$('#container > #viewManager > extensions-item-list');
+  const firstItem = await itemList.shadow$('extensions-item');
 
-    const itemList = await extensionsManager.shadow$('#container > #viewManager > extensions-item-list');
-    const firstItem = await itemList.shadow$('extensions-item');
+  const extensionId = (await firstItem.getAttribute('id')) ?? '';
 
-    const id = await firstItem.getAttribute('id');
-    return id ?? '';
-  })();
-
-  if (!extensionId) {
-    const debug = await browser.execute(() => {
-      const mgr = document.querySelector('extensions-manager') as any;
-      if (!mgr?.shadowRoot) return { hasManager: !!mgr, hasShadowRoot: false };
-      const itemList = mgr.shadowRoot.querySelector('#viewManager > extensions-item-list') as any;
-      return { hasManager: true, hasShadowRoot: true, hasItemList: !!itemList };
-    });
-
-    throw new Error(`Extension ID not found on chrome://extensions. Debug: ${JSON.stringify(debug)}`);
-  }
-
-  // Close chrome://extensions tab and go back
   await browser.closeWindow();
   await browser.switchToWindow(originalHandle);
 
+  if (!extensionId) throw new Error('Extension ID not found on chrome://extensions (UI scrape failed)');
   return extensionId;
 }
 
 export const getChromeExtensionPath = async (browser: WebdriverIO.Browser) => {
   if (cachedChromeExtensionPath) return cachedChromeExtensionPath;
 
-  // CI-safe path first
-  const cdpId = await tryResolveChromeExtensionIdViaCdp(browser);
-  if (cdpId) {
-    cachedChromeExtensionPath = `chrome-extension://${cdpId}`;
+  // Explicit override always wins (useful if multiple extensions loaded)
+  const forced = (process.env.RC_EXTENSION_ID ?? process.env.EXTENSION_ID ?? '').trim();
+  if (forced) {
+    cachedChromeExtensionPath = `chrome-extension://${forced}`;
     return cachedChromeExtensionPath;
   }
 
-  // Fallback for local environments where CDP might not be available
+  // CI-safe: read Preferences from --user-data-dir and match --load-extension
+  const prefId = await tryResolveChromeExtensionIdViaPreferences(browser);
+  if (prefId) {
+    cachedChromeExtensionPath = `chrome-extension://${prefId}`;
+    return cachedChromeExtensionPath;
+  }
+
+  // Last resort: UI scrape (often fails in CI/headless)
   const uiId = await resolveChromeExtensionIdViaExtensionsPage(browser);
   cachedChromeExtensionPath = `chrome-extension://${uiId}`;
   return cachedChromeExtensionPath;
@@ -114,7 +182,6 @@ export const getFirefoxExtensionPath = async (browser: WebdriverIO.Browser) => {
   await browser.url('about:debugging#/runtime/this-firefox');
 
   const uuidElement = await browser.$('//dt[contains(text(), "Internal UUID")]/following-sibling::dd').getElement();
-
   const internalUUID = await uuidElement.getText();
   if (!internalUUID) throw new Error('Internal UUID not found');
 

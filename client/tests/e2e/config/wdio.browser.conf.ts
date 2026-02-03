@@ -1,9 +1,12 @@
 import { config as baseConfig } from './wdio.conf.js';
 import { getChromeExtensionPath, getFirefoxExtensionPath } from '../utils/extension-path.js';
-import { IS_CI, IS_FIREFOX } from '@extension/env';
+import { IS_CI as ENV_IS_CI, IS_FIREFOX } from '@extension/env';
 import { execFileSync } from 'node:child_process';
+import { generateKeyPairSync } from 'node:crypto';
 import { readdir, readFile, mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
+
+const IS_CI = ENV_IS_CI || process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
 
 const findSystemChrome = () => {
   if (process.env.CHROME_BINARY) return process.env.CHROME_BINARY;
@@ -29,6 +32,9 @@ if (!IS_FIREFOX && !systemChrome) {
   );
 }
 
+// Per-process uniqueness (works whether WDIO runs 1 or N workers)
+const uniq = `${Date.now()}-${process.pid}-${Math.random().toString(16).slice(2)}`;
+
 const extName = IS_FIREFOX ? '.xpi' : '.zip';
 const distZipDir = join(import.meta.dirname, '../../../dist-zip');
 
@@ -50,13 +56,27 @@ const extPath = join(distZipDir, latestExtension);
 // Only needed for Firefox
 const bundledExtension = IS_FIREFOX ? (await readFile(extPath)).toString('base64') : '';
 
-const chromeUserDataDir = join(
-  import.meta.dirname,
-  `../.tmp/chrome-profile-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-);
+const chromeUserDataDir = join(import.meta.dirname, `../.tmp/chrome-profile-${uniq}`);
 
 // Unpack for Chrome so capabilities don't include a giant base64 string
-const unpackDir = join(import.meta.dirname, '../.tmp/unpacked-extension');
+const unpackDir = join(import.meta.dirname, `../.tmp/unpacked-extension-${uniq}`);
+
+// Ensure a deterministic-per-run key for Chrome extension ID.
+// We generate a new keypair if none is set; we only need the public key (DER -> base64).
+const ensureE2EKey = () => {
+  const existing = (process.env.RC_E2E_EXTENSION_KEY ?? '').trim();
+  if (existing) return existing;
+
+  const { publicKey } = generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    publicKeyEncoding: { type: 'spki', format: 'der' },
+    privateKeyEncoding: { type: 'pkcs8', format: 'pem' }, // unused, but required by API
+  });
+
+  const b64 = Buffer.from(publicKey).toString('base64');
+  process.env.RC_E2E_EXTENSION_KEY = b64;
+  return b64;
+};
 
 const patchManifestForE2E = async (dir: string) => {
   const manifestPath = join(dir, 'manifest.json');
@@ -72,12 +92,18 @@ const patchManifestForE2E = async (dir: string) => {
   // required for background to read tab.url and locate fixture tab by URL prefix
   manifest.permissions = Array.from(new Set([...(manifest.permissions ?? []), 'tabs']));
 
+  // Critical: make Chrome extension ID deterministic-per-run (avoids chrome://extensions scraping in CI).
+  // This is safe because it's only applied to the unpacked temp extension.
+  manifest.key = ensureE2EKey();
+
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
 };
 
 if (!IS_FIREFOX) {
   await rm(unpackDir, { recursive: true, force: true });
   await mkdir(unpackDir, { recursive: true });
+
+  // unzip must exist on ubuntu-latest; if you ever run locally without it, install unzip.
   execFileSync('unzip', ['-q', extPath, '-d', unpackDir]);
 
   await patchManifestForE2E(unpackDir);
@@ -91,17 +117,17 @@ const chromeCapabilities = {
     args: [
       '--no-sandbox',
       '--disable-dev-shm-usage',
-
       '--disable-popup-blocking',
+
+      // Avoid tiny headless viewport weirdness
+      '--window-size=1920,1080',
 
       // critical: avoids profile lock / corrupted temp profile crashes
       `--user-data-dir=${chromeUserDataDir}`,
 
-      // load unpacked extension
+      // load ONLY our unpacked extension
+      `--disable-extensions-except=${unpackDir}`,
       `--load-extension=${unpackDir}`,
-
-      // '--enable-logging=stderr',
-      // '--v=1',
 
       ...(IS_CI ? ['--headless=new'] : []),
     ],
@@ -121,14 +147,14 @@ export const config: WebdriverIO.Config = {
   ...baseConfig,
   capabilities: IS_FIREFOX ? [firefoxCapabilities] : [chromeCapabilities],
 
-  // keep output readable while stabilizing
+  // Keep stable and readable
   maxInstances: 1,
   logLevel: 'error',
-
-  // make spec output not drown in noise
   reporters: [['spec', { onlyFailures: true } as any]],
 
+  // Don’t accidentally enable inspector in CI (your logs show it was happening)
   execArgv: IS_CI ? [] : ['--inspect'],
+
   before: async ({ browserName }: WebdriverIO.Capabilities, _specs, browser: WebdriverIO.Browser) => {
     if (browserName === 'firefox') {
       await browser.installAddOn(bundledExtension, true);
@@ -137,8 +163,8 @@ export const config: WebdriverIO.Config = {
       browser.addCommand('getExtensionPath', async () => getChromeExtensionPath(browser));
     }
   },
+
   afterTest: async () => {
     if (!IS_CI) await browser.pause(200);
   },
 };
-

@@ -69,65 +69,11 @@ export const openPopupInNewTab = async () => {
   return { popupUrl, popupHandle, openerHandle };
 };
 
-const ensureExtensionContextTab = async () => {
-  const extensionPath = await browser.getExtensionPath();
-  const popupUrl = `${extensionPath}/popup/index.html`;
-
-  const openerHandle = await browser.getWindowHandle();
-  const before = new Set(await browser.getWindowHandles());
-
-  await browser.newWindow('about:blank');
-
-  await browser.waitUntil(async () => (await browser.getWindowHandles()).length > before.size, {
-    timeout: 1500,
-    timeoutMsg: `Extension context tab not created (about:blank)`,
-  });
-
-  const after = await browser.getWindowHandles();
-  const handle = after.find(h => !before.has(h)) ?? null;
-
-  if (!handle) {
-    const diag = await listWindows();
-    console.log('[E2E] ensureExtensionContextTab: missing new handle:', JSON.stringify(diag, null, 2));
-    throw new Error('Extension context handle not found after newWindow(about:blank)');
-  }
-
-  await browser.switchToWindow(handle);
-  await browser.url(popupUrl);
-
-  await browser.waitUntil(async () => isPopupUrl(await browser.getUrl(), popupUrl), {
-    timeout: 15000,
-    timeoutMsg: `Extension context URL mismatch (expected ${popupUrl}, got ${await browser.getUrl()})`,
-  });
-
-  // Wait for runtime API to actually be available (prevents early undefined)
-  await browser.waitUntil(
-    async () =>
-      (await browser.execute(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const chromeAny = (globalThis as any).chrome;
-        return !!chromeAny?.runtime?.sendMessage;
-      })) === true,
-    {
-      timeout: 15000,
-      timeoutMsg: 'chrome.runtime.sendMessage not available in extension context',
-    },
-  );
-
-  return { openerHandle, handle };
-};
-
 /**
- * E2E-only injection through background hook.
- *
- * IMPORTANT:
- * This must run in an extension context, but tests are usually on the fixture tab.
- * So this function temporarily opens the extension popup page in a new tab, sends
- * the message, then returns to the original tab.
+ * E2E-only injection through background hook (avoids popup tab targeting issues).
+ * Must be called while focused on a chrome-extension:// page.
  */
 export const e2eInjectIntoFixture = async (urlPrefix: string) => {
-  const { openerHandle, handle } = await ensureExtensionContextTab();
-
   const res = await browser.executeAsync((prefix: string, done: (v: any) => void) => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -147,15 +93,9 @@ export const e2eInjectIntoFixture = async (urlPrefix: string) => {
     }
   }, urlPrefix);
 
-  // Close extension tab and return to fixture tab
-  await browser.closeWindow();
-  await browser.switchToWindow(openerHandle);
-
   if (!res?.ok) {
     throw new Error(`RC_E2E_INJECT failed: ${JSON.stringify(res)}`);
   }
-
-  return res;
 };
 
 // Kept for future “popup UI smoke” tests. Don’t use this for injection anymore.
@@ -258,3 +198,4 @@ export const dragBy = async (el: WebdriverIO.Element, dx: number, dy: number) =>
   ]);
   await browser.releaseActions();
 };
+

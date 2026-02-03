@@ -198,4 +198,3 @@ export const dragBy = async (el: WebdriverIO.Element, dx: number, dy: number) =>
   ]);
   await browser.releaseActions();
 };
-

@@ -53,14 +53,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Your script already does:
+      # cross-env CLI_CEB_E2E=true pnpm zip && turbo e2e
       - name: Run E2E
         env:
           CI: true
           NODE_OPTIONS: --max-old-space-size=4096
           TURBO_UI: stream
-        run: |
-          pnpm set-global-env CLI_CEB_API_KEY=${{ secrets.CEB_API_KEY }}
-          pnpm e2e
+        run: pnpm e2e
 
       - name: Upload E2E artifacts (always)
         uses: actions/upload-artifact@v4

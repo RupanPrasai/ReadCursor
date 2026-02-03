@@ -61,9 +61,7 @@ jobs:
       - name: Zip extension
         env:
           NODE_OPTIONS: --max-old-space-size=4096
-        run: |
-          pnpm set-global-env CLI_CEB_API_KEY=${{ secrets.CEB_API_KEY }}
-          pnpm zip
+        run: pnpm zip
 
       - name: Upload dist-zip artifact
         uses: actions/upload-artifact@v4

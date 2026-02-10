@@ -117,6 +117,16 @@ type RcE2EInjectMsg = {
 };
 
 chrome.runtime.onMessage.addListener((msg: any, _sender, sendResponse) => {
+  if (msg?.type === 'E2E_PING') {
+    if (!isE2EBuild()) {
+      sendResponse({ ok: false, error: 'E2E_PING rejected: not an E2E build' });
+      return;
+    }
+
+    sendResponse({ ok: true, ready: true, ts: Date.now() });
+    return;
+  }
+
   if (msg?.type !== 'RC_E2E_INJECT') return;
 
   // Hard gate: should not work in production builds.

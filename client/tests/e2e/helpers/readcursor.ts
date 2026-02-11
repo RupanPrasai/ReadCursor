@@ -69,11 +69,53 @@ export const openPopupInNewTab = async () => {
   return { popupUrl, popupHandle, openerHandle };
 };
 
+
+const sleep = async (ms: number) => await browser.pause(ms);
+
+const pingE2EBackground = async () => {
+  return await browser.executeAsync(done => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const chromeAny = (globalThis as any).chrome;
+      if (!chromeAny?.runtime?.sendMessage) {
+        done({ ok: false, error: 'chrome.runtime.sendMessage unavailable (not in extension context?)' });
+        return;
+      }
+
+      chromeAny.runtime.sendMessage({ type: 'E2E_PING' }, (reply: any) => {
+        const err = chromeAny.runtime.lastError;
+        if (err) done({ ok: false, error: String(err.message ?? err) });
+        else done(reply ?? { ok: false, error: 'no reply' });
+      });
+    } catch (e: any) {
+      done({ ok: false, error: String(e?.message ?? e) });
+    }
+  });
+};
+
+export const waitForE2EBackgroundReady = async () => {
+  const maxAttempts = 8;
+  let lastError = 'unknown';
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const res = await pingE2EBackground();
+    if (res?.ok) return;
+
+    lastError = String(res?.error ?? res?.reason ?? 'no response');
+    const delayMs = Math.min(1000, 50 * 2 ** (attempt - 1));
+    await sleep(delayMs);
+  }
+
+  throw new Error(`E2E background handshake failed after ${maxAttempts} attempts: ${lastError}`);
+};
+
 /**
  * E2E-only injection through background hook (avoids popup tab targeting issues).
  * Must be called while focused on a chrome-extension:// page.
  */
 export const e2eInjectIntoFixture = async (urlPrefix: string) => {
+  await waitForE2EBackgroundReady();
+
   const res = await browser.executeAsync((prefix: string, done: (v: any) => void) => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

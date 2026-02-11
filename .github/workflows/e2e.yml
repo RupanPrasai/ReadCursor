@@ -1,73 +1,89 @@
-# name: E2E
+name: E2E
 
-# on:
-#  push:
-#    branches: [main]
-#  schedule:
-#    # 09:00 UTC ~= 03:00 America/Chicago (CST)
-#    - cron: "0 9 * * *"
-#  workflow_dispatch:
+on:
+  pull_request:
+  workflow_dispatch:
 
-# concurrency:
-#  group: e2e-${{ github.ref }}
-#  cancel-in-progress: true
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
 
-# permissions:
-#  contents: read
+permissions:
+  contents: read
 
-# jobs:
-#  e2e:
-#    runs-on: ubuntu-latest
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
 
-#    defaults:
-#      run:
-#        shell: bash
-#        working-directory: client
+    defaults:
+      run:
+        shell: bash
+        working-directory: client
 
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v4
+    env:
+      CI: true
+      NODE_OPTIONS: --max-old-space-size=4096
+      TURBO_UI: stream
+      WDIO_WORKER_COUNT: '1'
+      WDIO_HEADED: 'true'
 
-#      - name: Setup pnpm
-#        uses: pnpm/action-setup@v4
-#        with:
-#          version: 10.11.0
-#          run_install: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-#      - name: Setup Node (from .nvmrc)
-#        uses: actions/setup-node@v4
-#        with:
-#          node-version-file: client/.nvmrc
-#          cache: pnpm
-#          cache-dependency-path: client/pnpm-lock.yaml
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.0
+          run_install: false
 
-#      - name: Cache turbo
-#        uses: actions/cache@v4
-#        with:
-#          path: client/.turbo
-#          key: ${{ runner.os }}-turbo-e2e-${{ hashFiles('client/pnpm-lock.yaml', 'client/turbo.json', 'client/**/package.json') }}
-#          restore-keys: |
-#            ${{ runner.os }}-turbo-e2e-
-#            ${{ runner.os }}-turbo-
+      - name: Setup Node (from .nvmrc)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: client/.nvmrc
+          cache: pnpm
+          cache-dependency-path: client/pnpm-lock.yaml
 
-#      - name: Install dependencies
-#        run: pnpm install --frozen-lockfile
-#
-# cross-env CLI_CEB_E2E=true pnpm zip && turbo e2e
-#
-#      - name: Run E2E
-#        env:
-#          CI: true
-#          NODE_OPTIONS: --max-old-space-size=4096
-#          TURBO_UI: stream
-#        run: pnpm e2e
+      - name: Setup Chrome
+        id: setup-chrome
+        uses: browser-actions/setup-chrome@v1
 
-#      - name: Upload E2E artifacts (always)
-#        uses: actions/upload-artifact@v4
-#        if: always()
-#        with:
-#          name: e2e-artifacts
-#          path: |
-#            client/tests/e2e/.tmp/**
-#            client/dist-zip/*.zip
-#          if-no-files-found: warn
+      - name: Export Chrome binary path
+        run: |
+          echo "CHROME_BINARY=${{ steps.setup-chrome.outputs.chrome-path }}" >> "$GITHUB_ENV"
+          echo "chrome-path=${{ steps.setup-chrome.outputs.chrome-path }}"
+
+      - name: Log browser versions
+        run: |
+          echo "CHROME_BINARY=$CHROME_BINARY"
+          "$CHROME_BINARY" --version || true
+          google-chrome --version || true
+          chromedriver --version || true
+
+      - name: Cache turbo
+        uses: actions/cache@v4
+        with:
+          path: client/.turbo
+          key: ${{ runner.os }}-turbo-e2e-${{ hashFiles('client/pnpm-lock.yaml', 'client/turbo.json', 'client/**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-e2e-
+            ${{ runner.os }}-turbo-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build e2e extension bundle
+        run: pnpm exec cross-env CLI_CEB_E2E=true pnpm zip
+
+      - name: Run E2E
+        run: xvfb-run -a --server-args="-screen 0 1920x1080x24" pnpm turbo e2e --filter=@extension/e2e --concurrency=1 --no-daemon
+
+      - name: Upload E2E artifacts (always)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-artifacts
+          path: |
+            client/tests/e2e/.tmp/**
+            client/dist-zip/*.zip
+          if-no-files-found: warn

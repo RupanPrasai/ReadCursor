@@ -1,23 +1,4 @@
-import { openPopupInNewTab } from '../../helpers/readcursor.js';
-
-type InjectResult = {
-  ok?: boolean;
-  reason?: string;
-  error?: string;
-};
-
-async function rcE2EInjectFromPopup(urlPrefix: string): Promise<InjectResult> {
-  // Must run inside an extension page (popup/options/etc.) so chrome.runtime.* exists.
-  return browser.executeAsync((prefix: string, done) => {
-    try {
-      chrome.runtime.sendMessage({ type: 'RC_E2E_INJECT', urlPrefix: prefix }, resp => {
-        done(resp as any);
-      });
-    } catch (e) {
-      done({ ok: false, error: String(e) } as any);
-    }
-  }, urlPrefix);
-}
+import { e2eInjectIntoFixture, openPopupInNewTab } from '../../helpers/readcursor.js';
 
 async function pageHasReadCursorHost(): Promise<boolean> {
   return browser.execute(() => Boolean(document.querySelector('#__ROOT_READERPANEL__')));
@@ -39,17 +20,18 @@ describe('ReadCursor - blocked pages', () => {
 
     // Attempt injection via the E2E background hook
     await browser.switchToWindow(popupHandle);
-    const res = await rcE2EInjectFromPopup(urlPrefix);
 
-    // Assert the hook reports failure (shape may be {ok:false, reason} or {ok:false, error})
-    expect(res && typeof res === 'object').toBe(true);
-    expect(res.ok).toBe(false);
+    let thrown = '';
+    try {
+      await e2eInjectIntoFixture(urlPrefix);
+    } catch (e) {
+      thrown = String((e as Error)?.message ?? e);
+    }
 
-    const msg = String(res.reason ?? res.error ?? '');
-    expect(msg.length).toBeGreaterThan(0);
+    expect(thrown.length).toBeGreaterThan(0);
 
     // Be tolerant to Chrome/version wording differences
-    expect(msg.toLowerCase()).toMatch(
+    expect(thrown.toLowerCase()).toMatch(
       /(chrome\s*web\s*store|chromewebstore|webstore|cannot access|not allowed|cannot run|extensions.*cannot)/,
     );
 

@@ -2,6 +2,7 @@ import { config as baseConfig } from './wdio.conf.js';
 import { getChromeExtensionPath, getFirefoxExtensionPath } from '../utils/extension-path.js';
 import { IS_CI, IS_FIREFOX } from '@extension/env';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { readdir, readFile, mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 
@@ -21,6 +22,37 @@ const findSystemChrome = () => {
     return '';
   }
 };
+
+const getBinVersion = (binary: string) => {
+  try {
+    return execFileSync(binary, ['--version'], { encoding: 'utf8' }).trim();
+  } catch {
+    return `${binary} unavailable`;
+  }
+};
+
+const getChromeDriverVersion = () => {
+  try {
+    return execFileSync('bash', ['-lc', 'chromedriver --version || true'], { encoding: 'utf8' }).trim();
+  } catch {
+    return 'chromedriver unavailable';
+  }
+};
+
+const toChromeExtensionId = (manifestKey: string) => {
+  const digest = createHash('sha256').update(Buffer.from(manifestKey, 'base64')).digest();
+  const alphabet = 'abcdefghijklmnop';
+  const chars: string[] = [];
+
+  for (const byte of digest.subarray(0, 16)) {
+    chars.push(alphabet[(byte >> 4) & 0x0f]);
+    chars.push(alphabet[byte & 0x0f]);
+  }
+
+  return chars.join('');
+};
+
+const forceHeaded = process.env.WDIO_HEADED === 'true';
 
 const systemChrome = !IS_FIREFOX ? findSystemChrome() : '';
 if (!IS_FIREFOX && !systemChrome) {
@@ -52,35 +84,61 @@ const bundledExtension = IS_FIREFOX ? (await readFile(extPath)).toString('base64
 
 const chromeUserDataDir = join(
   import.meta.dirname,
-  `../.tmp/chrome-profile-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+  `../.tmp/chrome-profile-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
 );
 
 // Unpack for Chrome so capabilities don't include a giant base64 string
 const unpackDir = join(import.meta.dirname, '../.tmp/unpacked-extension');
 
-const patchManifestForE2E = async (dir: string) => {
-  const manifestPath = join(dir, 'manifest.json');
-  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-
-  // Mark as E2E so background can safely enable E2E-only hooks.
-  manifest.version_name = `${manifest.version ?? '0.0.0'}-e2e`;
-
-  manifest.host_permissions = Array.from(
-    new Set([...(manifest.host_permissions ?? []), 'http://127.0.0.1/*', 'http://localhost/*']),
-  );
-
-  // required for background to read tab.url and locate fixture tab by URL prefix
-  manifest.permissions = Array.from(new Set([...(manifest.permissions ?? []), 'tabs']));
-
-  await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
-};
+let e2eChromeExtensionId = '';
 
 if (!IS_FIREFOX) {
   await rm(unpackDir, { recursive: true, force: true });
   await mkdir(unpackDir, { recursive: true });
   execFileSync('unzip', ['-q', extPath, '-d', unpackDir]);
 
-  await patchManifestForE2E(unpackDir);
+  const manifestPath = join(unpackDir, 'manifest.json');
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as {
+    key?: string;
+    version_name?: string;
+    permissions?: string[];
+  };
+
+  manifest.permissions = Array.from(new Set([...(manifest.permissions ?? []), 'tabs']));
+  await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
+
+  if (!manifest.version_name?.includes('-e2e')) {
+    throw new Error('E2E manifest missing -e2e marker in version_name. Build with CLI_CEB_E2E=true.');
+  }
+
+  if (!manifest.key) {
+    throw new Error('E2E manifest missing deterministic key.');
+  }
+
+  e2eChromeExtensionId = toChromeExtensionId(manifest.key);
+}
+
+const chromeArgs = [
+  '--no-sandbox',
+  '--disable-dev-shm-usage',
+  '--disable-gpu',
+  '--disable-popup-blocking',
+  '--remote-debugging-port=0',
+  `--user-data-dir=${chromeUserDataDir}`,
+  `--disable-extensions-except=${unpackDir}`,
+  `--load-extension=${unpackDir}`,
+  ...(IS_CI && !forceHeaded ? ['--headless=new'] : []),
+];
+
+if (!IS_FIREFOX) {
+  console.log('[E2E][WDIO] chrome binary:', systemChrome);
+  console.log('[E2E][WDIO] chrome version:', getBinVersion(systemChrome));
+  console.log('[E2E][WDIO] chromedriver version:', getChromeDriverVersion());
+  console.log('[E2E][WDIO] chrome args:', JSON.stringify(chromeArgs));
+  console.log('[E2E][WDIO] chrome user data dir:', chromeUserDataDir);
+  console.log('[E2E][WDIO] unpacked extension dir:', unpackDir);
+  console.log('[E2E][WDIO] deterministic extension id:', e2eChromeExtensionId);
+  console.log('[E2E][WDIO] force headed:', forceHeaded);
 }
 
 const chromeCapabilities = {
@@ -88,23 +146,7 @@ const chromeCapabilities = {
   acceptInsecureCerts: true,
   'goog:chromeOptions': {
     binary: systemChrome,
-    args: [
-      '--no-sandbox',
-      '--disable-dev-shm-usage',
-
-      '--disable-popup-blocking',
-
-      // critical: avoids profile lock / corrupted temp profile crashes
-      `--user-data-dir=${chromeUserDataDir}`,
-
-      // load unpacked extension
-      `--load-extension=${unpackDir}`,
-
-      // '--enable-logging=stderr',
-      // '--v=1',
-
-      ...(IS_CI ? ['--headless=new'] : []),
-    ],
+    args: chromeArgs,
     prefs: { 'extensions.ui.developer_mode': true },
   },
 };
@@ -121,12 +163,14 @@ export const config: WebdriverIO.Config = {
   ...baseConfig,
   capabilities: IS_FIREFOX ? [firefoxCapabilities] : [chromeCapabilities],
 
-  // keep output readable while stabilizing
+  // extension e2e runs are fragile with parallel workers
   maxInstances: 1,
   logLevel: 'error',
 
   // make spec output not drown in noise
   reporters: [['spec', { onlyFailures: true } as any]],
+
+  outputDir: join(import.meta.dirname, '../.tmp/wdio-logs'),
 
   execArgv: IS_CI ? [] : ['--inspect'],
   before: async ({ browserName }: WebdriverIO.Capabilities, _specs, browser: WebdriverIO.Browser) => {
@@ -134,11 +178,10 @@ export const config: WebdriverIO.Config = {
       await browser.installAddOn(bundledExtension, true);
       browser.addCommand('getExtensionPath', async () => getFirefoxExtensionPath(browser));
     } else if (browserName === 'chrome') {
-      browser.addCommand('getExtensionPath', async () => getChromeExtensionPath(browser));
+      browser.addCommand('getExtensionPath', async () => getChromeExtensionPath(e2eChromeExtensionId));
     }
   },
   afterTest: async () => {
     if (!IS_CI) await browser.pause(200);
   },
 };
-

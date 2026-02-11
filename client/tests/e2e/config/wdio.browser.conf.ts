@@ -52,6 +52,8 @@ const toChromeExtensionId = (manifestKey: string) => {
   return chars.join('');
 };
 
+const forceHeaded = process.env.WDIO_HEADED === 'true';
+
 const systemChrome = !IS_FIREFOX ? findSystemChrome() : '';
 if (!IS_FIREFOX && !systemChrome) {
   throw new Error(
@@ -121,9 +123,11 @@ const chromeArgs = [
   '--disable-dev-shm-usage',
   '--disable-gpu',
   '--disable-popup-blocking',
+  '--remote-debugging-port=0',
   `--user-data-dir=${chromeUserDataDir}`,
+  `--disable-extensions-except=${unpackDir}`,
   `--load-extension=${unpackDir}`,
-  ...(IS_CI ? ['--headless=new'] : []),
+  ...(IS_CI && !forceHeaded ? ['--headless=new'] : []),
 ];
 
 if (!IS_FIREFOX) {
@@ -134,6 +138,7 @@ if (!IS_FIREFOX) {
   console.log('[E2E][WDIO] chrome user data dir:', chromeUserDataDir);
   console.log('[E2E][WDIO] unpacked extension dir:', unpackDir);
   console.log('[E2E][WDIO] deterministic extension id:', e2eChromeExtensionId);
+  console.log('[E2E][WDIO] force headed:', forceHeaded);
 }
 
 const chromeCapabilities = {

@@ -25,6 +25,7 @@ jobs:
       NODE_OPTIONS: --max-old-space-size=4096
       TURBO_UI: stream
       WDIO_WORKER_COUNT: '1'
+      WDIO_HEADED: 'true'
 
     steps:
       - name: Checkout
@@ -44,10 +45,18 @@ jobs:
           cache-dependency-path: client/pnpm-lock.yaml
 
       - name: Setup Chrome
+        id: setup-chrome
         uses: browser-actions/setup-chrome@v1
+
+      - name: Export Chrome binary path
+        run: |
+          echo "CHROME_BINARY=${{ steps.setup-chrome.outputs.chrome-path }}" >> "$GITHUB_ENV"
+          echo "chrome-path=${{ steps.setup-chrome.outputs.chrome-path }}"
 
       - name: Log browser versions
         run: |
+          echo "CHROME_BINARY=$CHROME_BINARY"
+          "$CHROME_BINARY" --version || true
           google-chrome --version || true
           chromedriver --version || true
 
@@ -67,7 +76,7 @@ jobs:
         run: pnpm exec cross-env CLI_CEB_E2E=true pnpm zip
 
       - name: Run E2E
-        run: pnpm turbo e2e --filter=@extension/e2e --concurrency=1 --no-daemon
+        run: xvfb-run -a --server-args="-screen 0 1920x1080x24" pnpm turbo e2e --filter=@extension/e2e --concurrency=1 --no-daemon
 
       - name: Upload E2E artifacts (always)
         uses: actions/upload-artifact@v4

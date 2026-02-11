@@ -3,7 +3,7 @@ import { getChromeExtensionPath, getFirefoxExtensionPath } from '../utils/extens
 import { IS_CI, IS_FIREFOX } from '@extension/env';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readdir, readFile, mkdir, rm, stat } from 'node:fs/promises';
+import { readdir, readFile, mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 
 const findSystemChrome = () => {
@@ -96,7 +96,14 @@ if (!IS_FIREFOX) {
   execFileSync('unzip', ['-q', extPath, '-d', unpackDir]);
 
   const manifestPath = join(unpackDir, 'manifest.json');
-  const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as { key?: string; version_name?: string };
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as {
+    key?: string;
+    version_name?: string;
+    permissions?: string[];
+  };
+
+  manifest.permissions = Array.from(new Set([...(manifest.permissions ?? []), 'tabs']));
+  await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
 
   if (!manifest.version_name?.includes('-e2e')) {
     throw new Error('E2E manifest missing -e2e marker in version_name. Build with CLI_CEB_E2E=true.');

@@ -64,7 +64,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build e2e extension bundle
-        run: cross-env CLI_CEB_E2E=true pnpm zip
+        run: pnpm exec cross-env CLI_CEB_E2E=true pnpm zip
 
       - name: Run E2E
         run: pnpm turbo e2e --filter=@extension/e2e --concurrency=1 --no-daemon

@@ -19,14 +19,7 @@ const manifest = {
   ...(IS_E2E ? { version_name: `${packageJson.version}-e2e`, key: E2E_EXTENSION_KEY } : {}),
 
   description: '__MSG_extensionDescription__',
-  permissions: [
-    'storage',
-    'scripting',
-    'contextMenus',
-    'activeTab',
-    'notifications',
-    ...(IS_E2E ? ['tabs'] : []),
-  ],
+  permissions: ['storage', 'scripting', 'contextMenus', 'activeTab', 'notifications'],
 
   // E2E-only host permissions so executeScript works deterministically in tests
   // (no reliance on activeTab being granted).
